@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { h } from './ui.js';
+import { h, themeButton } from './ui.js';
 import { state } from './app.js';
 
 export function mountAuth(root, done) {
@@ -24,7 +24,7 @@ export function mountAuth(root, done) {
       h('button', { class: 'btn primary wide', type: 'submit' }, mode === 'login' ? 'Sign in' : 'Create account'),
       state.registration ? h('p', { class: 'switch' }, mode === 'login' ? 'New here? ' : 'Have an account? ',
         h('a', { href: '#', onclick: (e) => { e.preventDefault(); mode = mode === 'login' ? 'register' : 'login'; draw(); } }, mode === 'login' ? 'Create an account' : 'Sign in')) : null);
-    root.replaceChildren(h('div', { class: 'auth-wrap' }, form));
+    root.replaceChildren(h('div', { class: 'auth-wrap' }, themeButton(), form));
     email.focus();
   };
   draw();

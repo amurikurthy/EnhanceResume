@@ -93,3 +93,16 @@ export async function logoDataUrl(file) {
   }
   throw new Error('Image too large');
 }
+
+export function themeButton() {
+  const btn = h('button', { class: 'icon-btn theme-btn', title: 'Toggle dark mode', 'aria-label': 'Toggle dark mode' });
+  const draw = () => { btn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀' : '☾'; };
+  btn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('er-theme', next); } catch { /* private mode */ }
+    draw();
+  });
+  draw();
+  return btn;
+}

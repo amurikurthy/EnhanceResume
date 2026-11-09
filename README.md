@@ -1,10 +1,12 @@
 # EnhanceResume
 
-A self-hosted, multi-tenant resume builder in the style of Enhancv: live preview, drag & drop editing, 8 templates, full design control and server-side PDF export. Ships as a single Docker container.
+A self-hosted, multi-tenant resume builder with live preview, drag & drop editing, 10 templates, full design control and server-side PDF export. Ships as a single Docker container.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
 ![Editor with live preview and drag & drop sections](docs/screenshots/editor.png)
+
+![Dark mode with a dark resume theme and photo](docs/screenshots/dark-mode.png)
 
 | Design controls | Templates |
 |---|---|
@@ -30,7 +32,9 @@ Without Docker: `npm ci && npm run build:assets && npm start` (Node ≥ 22.13, C
 
 ## Features
 
-- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose – previewed with your own content.
+- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose, Midnight Dark, Charcoal Gold – previewed with your own content.
+- **Dark mode**: the app UI follows your system setting with a toggle (☾/☀) in the top bar. Resumes have their own light & dark themes (Midnight, Charcoal, Forest, Plum, Paper, Mist) plus 12 accent colors, applied from the Design tab.
+- **Photos**: upload a profile photo (auto square-cropped) from *Header & contact*; choose circle / rounded / square, left or right, and size in *Design → Header*, or hide it.
 - **Drag & drop**: reorder sections, move them between main column and sidebar, reorder entries, bullets, skill groups, skills/tags, contacts.
 - **Sections**: summary, experience, education, projects, volunteering, publications, skills (chips/pills/commas/pipes), certifications (with icons), achievements, interests, languages (dots/bars/text), custom text. Entries support logos, links, `**bold**`/`*italic*` markup.
 - **Design**: 12 color themes + full custom colors, 20 bundled fonts (offline), margins, spacing, font size, line height, column width, sidebar fill, header styles (left/center/banner), photo shape/size/position, heading styles, bullet styles, date styles, background patterns (dots, grid, lines, diagonal, crosshatch, circles, waves, zigzag, triangles) for header or whole page, A4 / US Letter.

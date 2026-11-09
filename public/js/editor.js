@@ -339,6 +339,8 @@ export async function mountEditor(root, id) {
     const s = S();
     const redrawAll = () => drawPanel();
     const swatches = h('div', { class: 'swatches' }, T.PALETTES.map((p) => h('button', { class: 'swatch', title: p.name, style: { background: p.accent }, onclick: () => { doc.settings = T.applyPalette(doc.settings, p.id); touch(); redrawAll(); } })));
+    const themeCards = h('div', { class: 'themes' }, T.THEMES.map((t) => h('button', { class: 'theme-card', title: t.name + (t.dark ? ' (dark)' : ' (light)'), onclick: () => { doc.settings = T.applyColorTheme(doc.settings, t.id); touch(); redrawAll(); } },
+      h('span', { class: 'tc-prev', style: { background: t.colors.bg, borderColor: t.colors.line } }, h('i', { style: { background: t.colors.accent } }), h('i', { style: { background: t.colors.heading, opacity: .85 } }), h('i', { style: { background: t.colors.muted, width: '60%' } })), h('small', null, t.name))));
     const patTypes = T.ENUMS['pattern.type'].map((t) => [t, t[0].toUpperCase() + t.slice(1)]);
     return h('div', { class: 'tab-content' },
       group('Layout', true,
@@ -346,7 +348,7 @@ export async function mountEditor(root, id) {
         s.layout !== 'single' ? toggle('Filled sidebar background', 'sidebarFilled') : null,
         s.layout !== 'single' ? range('Main column width', 'columnRatio', 45, 78, 1, '%') : null,
         seg('Page size', 'pageSize', [['A4', 'A4'], ['Letter', 'US Letter']])),
-      group('Colors', true, h('div', { class: 'f-lbl' }, 'Color themes'), swatches,
+      group('Colors', true, h('div', { class: 'f-lbl' }, 'Accent colors'), swatches, h('div', { class: 'f-lbl' }, 'Light & dark resume themes'), themeCards,
         color('Accent', 'colors.accent'), color('Text', 'colors.text'), color('Headings', 'colors.heading'), color('Muted text', 'colors.muted'), color('Page background', 'colors.bg'),
         s.layout !== 'single' ? color('Sidebar background', 'colors.sidebarBg') : null,
         s.layout !== 'single' && s.sidebarFilled ? [color('Sidebar text', 'colors.sideText'), color('Sidebar accent', 'colors.sideAccent')] : null,

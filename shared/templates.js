@@ -68,6 +68,17 @@
     { id: 'mono', name: 'Mono', accent: '#111111' },
   ];
 
+  /* ---------- full colour themes (light & dark) ---------- */
+  const THEMES = [
+    { id: 'midnight', name: 'Midnight', dark: true, colors: { accent: '#38bdf8', text: '#e2e8f0', heading: '#ffffff', muted: '#94a3b8', bg: '#0f172a', sidebarBg: '#17223b', sideText: '#e2e8f0', sideAccent: '#7dd3fc', headerBg: '#1e3a5f', headerText: '#ffffff', line: '#2b3a55', chipBg: '#16213a', chipBorder: '#33425f' } },
+    { id: 'charcoal', name: 'Charcoal', dark: true, colors: { accent: '#f5b942', text: '#e5e5e7', heading: '#ffffff', muted: '#a1a1a6', bg: '#1c1c1e', sidebarBg: '#262629', sideText: '#e5e5e7', sideAccent: '#f5b942', headerBg: '#2c2c2e', headerText: '#ffffff', line: '#3a3a3d', chipBg: '#262629', chipBorder: '#46464a' } },
+    { id: 'forest', name: 'Forest', dark: true, colors: { accent: '#34d399', text: '#dcefe6', heading: '#ffffff', muted: '#8fb3a3', bg: '#0e1a16', sidebarBg: '#14261f', sideText: '#dcefe6', sideAccent: '#6ee7b7', headerBg: '#0f3d2e', headerText: '#ffffff', line: '#25443a', chipBg: '#13241d', chipBorder: '#2d5244' } },
+    { id: 'plum', name: 'Plum', dark: true, colors: { accent: '#c084fc', text: '#eadcf5', heading: '#ffffff', muted: '#b39cc9', bg: '#1a1024', sidebarBg: '#251536', sideText: '#eadcf5', sideAccent: '#d8b4fe', headerBg: '#3b1d5a', headerText: '#ffffff', line: '#3a2552', chipBg: '#221330', chipBorder: '#4a2f68' } },
+    { id: 'paper', name: 'Paper', dark: false, colors: { accent: '#b45309', text: '#2d2a26', heading: '#1c1917', muted: '#6b645b', bg: '#fbf7ef', sidebarBg: '#f1e9d8', sideText: '#2d2a26', sideAccent: '#b45309', headerBg: '#b45309', headerText: '#ffffff', line: '#ddd2bd', chipBg: '#fffaf0', chipBorder: '#d6c9ad' } },
+    { id: 'mist', name: 'Mist', dark: false, colors: { accent: '#4f46e5', text: '#1e293b', heading: '#0f172a', muted: '#64748b', bg: '#f8fafc', sidebarBg: '#e8edf7', sideText: '#1e293b', sideAccent: '#4f46e5', headerBg: '#4f46e5', headerText: '#ffffff', line: '#d5dce8', chipBg: '#ffffff', chipBorder: '#c9d2e3' } },
+  ];
+  const THEME = (id) => THEMES.find((t) => t.id === id).colors;
+
   /* ---------- section types ---------- */
   const ICON_CHOICES = ['', 'award', 'shield', 'key', 'code', 'cloud', 'network', 'server', 'book', 'cap', 'briefcase',
     'star', 'check', 'terminal', 'cpu', 'database', 'wifi', 'lock', 'flag', 'zap', 'tool', 'trend', 'layers', 'target', 'heart', 'globe', 'monitor'];
@@ -300,6 +311,26 @@
         heading: { style: 'short', case: 'title', size: 12.5 }, entries: { dividers: false, dateStyle: 'icons' }, skills: { style: 'outline' },
       },
     },
+    {
+      id: 'midnight', name: 'Midnight Dark', desc: 'Dark mode resume with a filled sidebar.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education'],
+      patch: {
+        layout: 'side-left', sidebarFilled: true, columnRatio: 67, fontHeading: 'Space Grotesk', fontBody: 'Inter', fontSize: 9.2,
+        colors: THEME('midnight'),
+        pattern: { type: 'grid', area: 'page', color: '#38bdf8', opacity: 0.06, scale: 1 },
+        header: { in: 'main', contactsIn: 'side', photoShape: 'circle', photoSize: 34, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'short', case: 'upper', size: 10.5 }, entries: { dividers: false, dateStyle: 'plain' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'noir', name: 'Charcoal Gold', desc: 'Dark single page with a gold accent.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Playfair Display', fontBody: 'Lato', fontSize: 9.5,
+        colors: THEME('charcoal'),
+        pattern: { type: 'circles', area: 'header', color: '#f5b942', opacity: 0.14, scale: 1 },
+        header: { style: 'left', photoShape: 'rounded', photoSize: 28, nameCase: 'title', nameSize: 28, titleColor: 'accent' },
+        heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
   ];
 
   function applyTemplate(doc, id) {
@@ -328,6 +359,15 @@
       const dark = luminance(s.colors.sidebarBg) < 0.4;
       s.colors.sidebarBg = dark ? mix(p.accent, '#000000', 0.62) : mix(p.accent, '#ffffff', 0.92);
     }
+    return s;
+  }
+
+  function applyColorTheme(settings, id) {
+    const t = THEMES.find((x) => x.id === id);
+    if (!t) return settings;
+    const s = clone(settings);
+    Object.assign(s.colors, t.colors);
+    s.pattern.color = s.header.style === 'banner' ? '#ffffff' : t.colors.accent;
     return s;
   }
 
@@ -388,8 +428,8 @@
   const PAGE_MM = { A4: [210, 297], Letter: [215.9, 279.4] };
 
   return {
-    FONTS, PALETTES, TEMPLATES, SECTION_TYPES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
-    defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, sampleDoc, blankDoc,
+    FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
+    defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
     deepMerge, clone, uid, mix, luminance,
   };
 });

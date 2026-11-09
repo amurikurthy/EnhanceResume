@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { h, toast, modal, confirmDlg, thumb, downloadBlob } from './ui.js';
+import { h, toast, modal, confirmDlg, thumb, downloadBlob, themeButton } from './ui.js';
 import { state, logout } from './app.js';
 
 const T = window.ERT;
@@ -8,7 +8,7 @@ export function topbar(extra) {
   return h('header', { class: 'topbar' },
     h('a', { class: 'logo', href: '#/' }, h('span', { class: 'logo-mark' }), 'EnhanceResume'),
     h('div', { class: 'spacer' }), extra,
-    h('div', { class: 'user' }, h('span', { class: 'avatar' }, (state.user.name || '?')[0].toUpperCase()), h('span', { class: 'uname' }, state.user.name),
+    themeButton(), h('div', { class: 'user' }, h('span', { class: 'avatar' }, (state.user.name || '?')[0].toUpperCase()), h('span', { class: 'uname' }, state.user.name),
       h('button', { class: 'btn ghost', onclick: logout }, 'Sign out')));
 }
 
