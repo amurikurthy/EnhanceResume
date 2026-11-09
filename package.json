@@ -1,0 +1,41 @@
+{
+  "name": "enhance-resume",
+  "version": "1.0.0",
+  "description": "EnhanceResume - a multi-tenant, web based resume builder with drag & drop editing and PDF export",
+  "private": true,
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build:assets": "node scripts/build-assets.js",
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test --test-force-exit test/*.test.js"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/eb-garamond": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/lato": "^5.3.0",
+    "@fontsource/libre-baskerville": "^5.3.0",
+    "@fontsource/lora": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "@fontsource/merriweather": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
+    "@fontsource/nunito": "^5.3.0",
+    "@fontsource/open-sans": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
+    "@fontsource/raleway": "^5.3.0",
+    "@fontsource/roboto": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.1",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "@fontsource/work-sans": "^5.3.0",
+    "express": "^4.22.3",
+    "puppeteer-core": "^23.11.1",
+    "sortablejs": "^1.15.7"
+  }
+}

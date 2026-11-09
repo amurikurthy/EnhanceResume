@@ -1,0 +1,21 @@
+services:
+  enhanceresume:
+    build: .
+    image: enhanceresume:latest
+    container_name: enhanceresume
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Set to "false" to close sign-ups once your users have registered
+      ALLOW_REGISTRATION: "true"
+      # Set to "true" when serving over HTTPS (behind a reverse proxy) so cookies are Secure
+      COOKIE_SECURE: "false"
+      # TRUST_PROXY: "true"   # enable behind nginx/traefik so rate limiting sees real client IPs
+      MAX_RESUMES_PER_USER: "50"
+      PDF_CONCURRENCY: "3"
+    volumes:
+      - er-data:/data
+    shm_size: "512mb"   # Chromium needs shared memory for PDF rendering
+volumes:
+  er-data:

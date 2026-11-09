@@ -1,0 +1,22 @@
+[
+  {"name":"Inter","pkg":"inter","cat":"sans"},
+  {"name":"Lato","pkg":"lato","cat":"sans"},
+  {"name":"Open Sans","pkg":"open-sans","cat":"sans"},
+  {"name":"Roboto","pkg":"roboto","cat":"sans"},
+  {"name":"Montserrat","pkg":"montserrat","cat":"sans"},
+  {"name":"Poppins","pkg":"poppins","cat":"sans"},
+  {"name":"Raleway","pkg":"raleway","cat":"sans"},
+  {"name":"Nunito","pkg":"nunito","cat":"sans"},
+  {"name":"Source Sans 3","pkg":"source-sans-3","cat":"sans"},
+  {"name":"Work Sans","pkg":"work-sans","cat":"sans"},
+  {"name":"DM Sans","pkg":"dm-sans","cat":"sans"},
+  {"name":"IBM Plex Sans","pkg":"ibm-plex-sans","cat":"sans"},
+  {"name":"Space Grotesk","pkg":"space-grotesk","cat":"sans"},
+  {"name":"Manrope","pkg":"manrope","cat":"sans"},
+  {"name":"Merriweather","pkg":"merriweather","cat":"serif"},
+  {"name":"Playfair Display","pkg":"playfair-display","cat":"serif"},
+  {"name":"Lora","pkg":"lora","cat":"serif"},
+  {"name":"Libre Baskerville","pkg":"libre-baskerville","cat":"serif"},
+  {"name":"EB Garamond","pkg":"eb-garamond","cat":"serif"},
+  {"name":"IBM Plex Mono","pkg":"ibm-plex-mono","cat":"mono"}
+]
