@@ -2,6 +2,14 @@
 
 A self-hosted, multi-tenant resume builder in the style of Enhancv: live preview, drag & drop editing, 8 templates, full design control and server-side PDF export. Ships as a single Docker container.
 
+![Dashboard](docs/screenshots/dashboard.png)
+
+![Editor with live preview and drag & drop sections](docs/screenshots/editor.png)
+
+| Design controls | Templates |
+|---|---|
+| ![Design tab](docs/screenshots/design.png) | ![Templates tab](docs/screenshots/templates.png) |
+
 ## Run
 
 ```bash
