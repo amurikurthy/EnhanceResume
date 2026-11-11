@@ -32,10 +32,10 @@
 .rz-contacts.vert .ic { margin-top: .15em; }
 .rz-photo { width: var(--photo); height: var(--photo); object-fit: cover; flex: none; display: block; }
 .ps-circle { border-radius: 50%; } .ps-rounded { border-radius: 18%; } .ps-square { border-radius: 0; }
-.pp-left .rz-photo { order: -1; }
+.pp-left .rz-photo, .pp-left .rz-halo { order: -1; }
 .rz-side-top .rz-photo { align-self: flex-start; }
 .hd-center .rz-header { flex-direction: column; text-align: center; gap: 3mm; }
-.hd-center .rz-header .rz-photo { order: -1; }
+.hd-center .rz-header .rz-photo, .hd-center .rz-header .rz-halo { order: -1; }
 .hd-center .rz-contacts { justify-content: center; }
 .hd-banner .rz-header { background-color: var(--header-bg); color: var(--header-text); padding: 6mm 7mm; border-radius: 2mm; }
 .hd-banner .rz-name, .hd-banner .rz-jobtitle, .hd-banner .rz-contacts .ic { color: var(--header-text); }
@@ -128,3 +128,10 @@
 
 /* chips stretch to use the full row, so narrow columns have no ragged gaps */
 .sk-fill.sk-chips .rz-tag, .sk-fill.sk-outline .rz-tag { flex: 1 1 auto; text-align: center; }
+
+/* mandala halo around the header photo (henna accent) */
+.rz-halo { position: relative; flex: none; width: var(--photo); height: var(--photo); display: block; color: var(--accent); margin: 0 calc(var(--photo) * 0.2); }
+.hd-banner .rz-halo { color: var(--header-text); }
+.rz-halo-art { position: absolute; left: 50%; top: 50%; width: 200%; height: 200%; transform: translate(-50%, -50%); overflow: visible; pointer-events: none; }
+.rz-halo > .rz-photo { position: relative; z-index: 1; }
+.rz-header:has(.rz-halo) { margin-bottom: calc(var(--sgap) + var(--photo) * 0.14); }

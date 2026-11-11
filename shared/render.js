@@ -379,7 +379,7 @@
       imgs.push(g); sizes.push('100% 100%'); reps.push('no-repeat'); poss.push('0 0');
     }
     const [pwMM, phMM] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
-    const pl = s.pattern.area === 'page' ? patternLayer(s.pattern, { pw: pwMM + 'mm', ph: o.pageH || phMM + 'mm' }) : null;
+    const pl = s.pattern.area === 'page' && !haloOn(doc, li) ? patternLayer(s.pattern, { pw: pwMM + 'mm', ph: o.pageH || phMM + 'mm' }) : null;
     // fine accents sit above the sidebar fill; tiled textures stay underneath it
     if (pl) { const at = pl.accent ? 0 : imgs.length; imgs.splice(at, 0, pl.img); sizes.splice(at, 0, pl.size); reps.splice(at, 0, pl.repeat); poss.splice(at, 0, pl.pos); }
     let css = `background-color:${s.colors.bg};`;
@@ -406,18 +406,43 @@
       return `<li>${showIcons ? icon(c.icon) : ''}${label}</li>`;
     }).join('') + '</ul>';
   }
-  function photoHtml(doc) {
+  /* Henna accent + a header photo: instead of a corner flower hidden behind the photo, draw the mandala as a halo around it */
+  function haloOn(doc, li) {
+    const s = doc.settings;
+    const photoShown = s.header.photoShape !== 'none' && !!doc.header.photo;
+    const photoInHeader = !li.twoCol || s.header.in === 'top';
+    return s.pattern.type === 'henna' && photoShown && photoInHeader;
+  }
+  function haloSvg(op, shape) {
+    // radii are relative to the photo (its radius is 25 units); square photos need a bigger ring to clear the corners
+    const f = shape === 'circle' ? 1 : 1.2;
+    const st = (w) => `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${op}"`;
+    let b = `<circle r="${(26.8 * f).toFixed(2)}" ${st(0.5)}/><circle r="${(28.8 * f).toFixed(2)}" ${st(0.35)}/>`;
+    for (let k = 0; k < 56; k++) { const a = (k * 2 * Math.PI) / 56; b += `<circle cx="${(27.8 * f * Math.cos(a)).toFixed(2)}" cy="${(27.8 * f * Math.sin(a)).toFixed(2)}" r="0.4" fill="currentColor" fill-opacity="${op}"/>`; }
+    const petal = (th, r1, r2, w, inner) => {
+      r1 *= f; r2 *= f; w *= f;
+      const B = [r1 * Math.cos(th), r1 * Math.sin(th)], T = [r2 * Math.cos(th), r2 * Math.sin(th)], m = [((r1 + r2) / 2) * Math.cos(th), ((r1 + r2) / 2) * Math.sin(th)], px = -Math.sin(th) * w, py = Math.cos(th) * w;
+      let d = `<path d="M${B[0].toFixed(2)} ${B[1].toFixed(2)}Q${(m[0] + px).toFixed(2)} ${(m[1] + py).toFixed(2)} ${T[0].toFixed(2)} ${T[1].toFixed(2)}Q${(m[0] - px).toFixed(2)} ${(m[1] - py).toFixed(2)} ${B[0].toFixed(2)} ${B[1].toFixed(2)}Z" ${st(0.42)}/>`;
+      if (inner) d += `<path d="M${((r1 + 2.6) * Math.cos(th)).toFixed(2)} ${((r1 + 2.6) * Math.sin(th)).toFixed(2)}L${((r2 - 3) * Math.cos(th)).toFixed(2)} ${((r2 - 3) * Math.sin(th)).toFixed(2)}" ${st(0.22)}/>`;
+      return d;
+    };
+    for (let k = 0; k < 16; k++) b += petal((k * 2 * Math.PI) / 16, 30, 37.5, 4, true);
+    for (let k = 0; k < 16; k++) b += petal(((k + 0.5) * 2 * Math.PI) / 16, 30.4, 34.2, 2.5, false);
+    return `<svg class="rz-halo-art" viewBox="-50 -50 100 100" aria-hidden="true">${b}</svg>`;
+  }
+  function photoHtml(doc, halo) {
     const s = doc.settings.header;
     if (s.photoShape === 'none' || !doc.header.photo) return '';
-    return `<img class="rz-photo ps-${s.photoShape}" src="${esc(doc.header.photo)}" alt="" data-edit="header">`;
+    const img = `<img class="rz-photo ps-${s.photoShape}" src="${esc(doc.header.photo)}" alt="" data-edit="header">`;
+    return halo ? `<span class="rz-halo">${haloSvg(Math.min(1, doc.settings.pattern.opacity * 1.7 + 0.05).toFixed(2), s.photoShape)}${img}</span>` : img;
   }
   function headerHtml(doc, li, mode) {
     const h = doc.header, s = doc.settings;
     const side = mode === 'main' && li.twoCol; // name block lives in main column, photo+contacts in sidebar
-    const pat = s.pattern.area === 'header' ? patternLayer(s.pattern) : null;
+    const pat = s.pattern.area === 'header' && !haloOn(doc, li) ? patternLayer(s.pattern) : null;
     const pstyle = pat ? ` style="background-image:${esc(pat.img)};background-size:${pat.size};background-repeat:${pat.repeat};background-position:${pat.pos}"` : '';
     const contactsInHeader = !(side && s.header.contactsIn === 'side');
-    const photo = side ? '' : photoHtml(doc);
+    const photo = side ? '' : photoHtml(doc, haloOn(doc, li));
     return `<header class="rz-header pp-${s.header.photoPos}" data-edit="header"${pstyle}>` +
       `<div class="rz-hd-text">` +
       (h.name || EDIT ? `<h1 class="rz-name"${fa('H:name', 'line', 'Your name')}>${esc(h.name)}</h1>` : '') +
