@@ -244,7 +244,7 @@
       }
 
     } else if (type === 'henna') {
-      // hand-drawn henna flourish: a sweeping line that ends in a half-mandala, with dotted arcs, dots and tiny hearts
+      // hand-drawn henna flourish: a sweeping line that ends in a half-mandala, with dotted arcs and dots
       const cx = 190, cy = 34, pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
       b += `<path d="M108 30C122 24 132 42 152 41S176 38 ${cx - 15} ${cy + 3}" ${st(0.55)}/>`;
       b += `<path d="M${cx + 15} ${cy + 3}C202 ${cy + 4} 210 ${cy + 1} 220 ${cy - 5}" ${st(0.55)}/>`;
@@ -261,7 +261,6 @@
       }
       for (let i = 0; i < 9; i++) { const x = 108 + i * 4.4, y = 16 + 3.2 * Math.sin((i / 8) * Math.PI); b += dot(x.toFixed(1), y.toFixed(1), (0.95 - i * 0.05).toFixed(2)); }
       [[122, 12], [142, 12], [160, 20], [112, 66], [132, 72], [152, 66], [172, 74], [198, 70], [204, 26], [190, 8], [108, 46], [132, 38], [168, 30]].forEach(([x, y], i) => { b += dot(x, y, i % 3 ? 0.55 : 0.85, 0.9); });
-      [[114, 52], [200, 88], [134, 6], [160, 90]].forEach(([x, y]) => { b += `<path transform="translate(${x} ${y}) scale(1.1)" d="M0 .7C-.9 -.9 -3.2 .1 0 3C3.2 .1 .9 -.9 0 .7Z" fill="${col}" fill-opacity="${(op * 0.85).toFixed(3)}"/>`; });
     }
     return b;
   }
