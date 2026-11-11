@@ -34,9 +34,12 @@
     "@fontsource/source-sans-3": "^5.3.1",
     "@fontsource/space-grotesk": "^5.3.0",
     "@fontsource/work-sans": "^5.3.0",
+    "compression": "^1.8.2",
     "express": "^4.22.3",
     "jose": "^5.10.0",
+    "lucide-static": "^1.72.0",
     "puppeteer-core": "^23.11.1",
+    "simple-icons": "^16.37.0",
     "sortablejs": "^1.15.7"
   }
 }

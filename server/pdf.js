@@ -21,7 +21,19 @@ function fontFaces(names) {
   return css;
 }
 
+/* icon libraries are large, so each is read only when a resume actually uses it */
+const libLoaded = {};
+function ensureIconLibs(doc) {
+  const j = JSON.stringify(doc);
+  const need = { brands: /"icon":"brand:/.test(j), lucide: [...j.matchAll(/"icon":"([a-z0-9-]+)"/g)].some((m) => !R.ICONS[m[1]]) };
+  for (const kind of Object.keys(need)) {
+    if (!need[kind] || libLoaded[kind]) continue;
+    try { R.setIconLib(kind, JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'icons', kind + '.json'), 'utf8'))); libLoaded[kind] = true; } catch { /* run npm run build:assets */ }
+  }
+}
+
 function buildHtml(doc) {
+  ensureIconLibs(doc);
   const s = doc.settings, m = s.margins;
   const [pw, ph] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
   return `<!doctype html><html><head><meta charset="utf-8"><title>${R.esc(doc.header.name || 'Resume')}</title><style>

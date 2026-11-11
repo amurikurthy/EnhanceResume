@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import { h, toast, modal, confirmDlg, thumb, downloadBlob, themeButton } from './ui.js';
 import { state, logout } from './app.js';
+import { ensureIconsFor } from './icons.js';
 
 const T = window.ERT;
 
@@ -30,6 +31,7 @@ async function newResumeDialog() {
 
 export async function mountDashboard(root) {
   const list = await api.get('/api/resumes');
+  await ensureIconsFor(list.map((r) => r.data));
   const grid = h('div', { class: 'cards' });
   const fileIn = h('input', { type: 'file', accept: 'application/json,.json', style: { display: 'none' }, onchange: async (e) => {
     const f = e.target.files[0]; if (!f) return;

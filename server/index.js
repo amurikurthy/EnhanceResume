@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const crypto = require('crypto');
 const path = require('path');
 const { db } = require('./db');
@@ -18,6 +19,7 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'same-origin');
   next();
 });
+app.use(compression());
 app.use(express.json({ limit: '4mb' }));
 app.use('/api', A.csrfGuard);
 

@@ -113,7 +113,21 @@
     harddrive: L(22, 12, 2, 12) + P('M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z') + L(6, 16, 6.01, 16) + L(10, 16, 10.01, 16),
     infinity: P('M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z'),
   };
-  const icon = (name) => (ICONS[name] ? `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>` : '');
+  /* optional bundled libraries, loaded on demand: Lucide (stroke icons, by name) and Simple Icons (brand logos, 'brand:slug') */
+  const LIB = { lucide: null, brands: null };
+  const setIconLib = (kind, data) => { LIB[kind] = data; };
+  const libs = () => LIB;
+  const STROKE = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  function icon(name) {
+    if (!name) return '';
+    if (ICONS[name]) return `<svg class="ic" viewBox="0 0 24 24" ${STROKE} aria-hidden="true">${ICONS[name]}</svg>`;
+    if (name.startsWith('brand:')) {
+      const b = LIB.brands && LIB.brands[name.slice(6)];
+      return b ? `<svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${b.p}"/></svg>` : '';
+    }
+    const l = LIB.lucide && LIB.lucide[name];
+    return l ? `<svg class="ic" viewBox="0 0 24 24" ${STROKE} aria-hidden="true">${l.s}</svg>` : '';
+  }
 
   /* ---------- edit mode: fields become contenteditable and carry an id (data-f) ---------- */
   let EDIT = false;
@@ -395,5 +409,5 @@
     return `<div class="${cls.join(' ')}" style="${style}">${html}</div>`;
   }
 
-  return { render, pageBg, layoutInfo, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl };
+  return { render, pageBg, layoutInfo, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl, setIconLib, libs };
 });

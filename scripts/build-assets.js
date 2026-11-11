@@ -30,3 +30,33 @@ for (const f of list) {
 fs.writeFileSync(path.join(out, 'fonts.css'), css);
 fs.writeFileSync(path.join(out, 'fonts.json'), JSON.stringify(manifest, null, 1));
 console.log(`Fonts built: ${list.length} families, ${fs.readdirSync(out).length - 2} files`);
+
+/* ---- icon libraries (bundled offline): Lucide (ISC) stroke icons and Simple Icons (CC0) brand logos ---- */
+const iconsOut = path.join(root, 'public', 'icons');
+fs.rmSync(iconsOut, { recursive: true, force: true });
+fs.mkdirSync(iconsOut, { recursive: true });
+{
+  const nodes = require('lucide-static/icon-nodes.json');
+  let tags = {};
+  try { tags = require('lucide-static/tags.json'); } catch { /* optional */ }
+  const attr = (a) => Object.entries(a).filter(([k]) => k !== 'key').map(([k, v]) => ` ${k}="${String(v).replace(/"/g, '&quot;')}"`).join('');
+  const out = {};
+  for (const [name, list] of Object.entries(nodes)) {
+    out[name] = { s: list.map(([tag, a]) => `<${tag}${attr(a)}/>`).join(''), t: (tags[name] || []).join(' ') };
+  }
+  fs.writeFileSync(path.join(iconsOut, 'lucide.json'), JSON.stringify(out));
+  console.log(`Lucide icons: ${Object.keys(out).length}`);
+}
+{
+  const dir = path.join(root, 'node_modules', 'simple-icons', 'icons');
+  const out = {};
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.svg')) continue;
+    const svg = fs.readFileSync(path.join(dir, f), 'utf8');
+    const d = (svg.match(/<path[^>]* d="([^"]+)"/) || [])[1];
+    const title = (svg.match(/<title>([^<]+)<\/title>/) || [])[1] || f.replace('.svg', '');
+    if (d) out[f.replace('.svg', '')] = { t: title.replace(/&amp;/g, '&'), p: d };
+  }
+  fs.writeFileSync(path.join(iconsOut, 'brands.json'), JSON.stringify(out));
+  console.log(`Brand icons: ${Object.keys(out).length}`);
+}

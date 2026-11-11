@@ -133,7 +133,7 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 - **Arrange view**: a page map that mirrors the PDF's pagination (sections that would be cut move to the next page). Drop a box anywhere in a column to place it.
 - **Version history**: a drawer with named versions and automatic restore points (kept on the server), previews that show the old version on the page, one-click restore (the current state is saved first), and a per-session list of recent edits you can jump back to.
 - **Resizable panes**: drag the divider between the tools and the page (double-click to reset); widths are remembered.
-- **Icons**: pick an icon for any section heading, experience/education entry, or list item (or upload a logo instead).
+- **Icons**: pick an icon for any section heading, experience/education entry, or list item (or upload a logo instead). The picker searches about 2,000 [Lucide](https://lucide.dev) icons and 3,400 brand logos from [Simple Icons](https://simpleicons.org), all bundled offline (loaded only when used, and embedded in the PDF). Brand logos remain the property of their owners.
 - **Drag & drop**: reorder sections, move them between main column and sidebar, reorder entries, bullets, skill groups, skills/tags, contacts.
 - **Sections**: summary, experience, education, projects, volunteering, publications, skills (chips/pills/commas/pipes), certifications (with icons), achievements, interests, languages (dots/bars/text), custom text. Entries support logos, links, `**bold**`/`*italic*` markup.
 - **Design**: 12 color themes + full custom colors, 20 bundled fonts (offline), margins, spacing, font size, line height, column width, sidebar fill, header styles (left/center/banner), photo shape/size/position, heading styles, bullet styles, date styles, background patterns (dots, grid, lines, diagonal, crosshatch, circles, waves, zigzag, triangles, circuit board, network) for header or whole page, plus six subtle one-per-page corner accents (arcs, traces, contour, node map, fading dots, fading lines), A4 / US Letter.
@@ -145,3 +145,7 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 `shared/` renderer, templates and CSS (used by browser and server) · `server/` Express + SQLite + PDF · `public/` single-page app · `test/` smoke tests (`npm test`).
 
 Note: the preview's red dashed lines mark *approximate* page breaks; the PDF is authoritative (it keeps entries and bullets together across pages).
+
+## Third-party assets
+
+Fonts via [Fontsource](https://fontsource.org) (OFL/Apache), icons from Lucide (ISC license) and Simple Icons (CC0). They are copied into `public/` by `npm run build:assets` and need no network at runtime.

@@ -1,6 +1,7 @@
 import * as api from './api.js';
 import { h, toast, modal, confirmDlg, thumb, downloadBlob, photoDataUrl, logoDataUrl, ctxMenu, closeCtx } from './ui.js';
 import { topbar } from './dashboard.js';
+import { ensureIconsFor, loadLucide, loadBrands } from './icons.js';
 
 const T = window.ERT, R = window.ERR;
 const MM = 96 / 25.4;
@@ -8,6 +9,7 @@ const MM = 96 / 25.4;
 export async function mountEditor(root, id) {
   const rec = await api.get('/api/resumes/' + id);
   let doc = T.normalizeDoc(rec.data);
+  await ensureIconsFor(doc);
   let title = rec.title;
   let tab = 'content';
   let zoomMode = 'fit', zoom = 1;
@@ -75,12 +77,46 @@ export async function mountEditor(root, id) {
   function outsidePicker(e) { if (pickerEl && !pickerEl.contains(e.target)) closePicker(); }
   function iconPicker(current, onPick, anchor) {
     closePicker();
-    pickerEl = h('div', { class: 'icon-pop' }, T.ICON_CHOICES.map((n) => h('button', { type: 'button', class: 'ip' + (n === current ? ' on' : ''), title: n || 'No icon', onmousedown: (e) => e.preventDefault(), onclick: () => { closePicker(); onPick(n); }, html: n ? R.icon(n) : '<span class="none">∅</span>' })));
+    let tab = current && current.startsWith('brand:') ? 'brands' : 'essentials', query = '', shown = 0;
+    const CHUNK = 144;
+    const search = h('input', { type: 'text', class: 'ip-search', placeholder: 'Search icons…', 'aria-label': 'Search icons' });
+    const tabs = h('div', { class: 'ip-tabs' });
+    const grid = h('div', { class: 'ip-grid' });
+    const note = h('div', { class: 'ip-note muted small' });
+    pickerEl = h('div', { class: 'icon-pop' }, search, tabs, grid, note);
     document.body.append(pickerEl);
+    const pick = (n) => () => { closePicker(); onPick(n); };
+    const btn = (value, title, svg) => h('button', { type: 'button', class: 'ip' + (value === current ? ' on' : ''), title, onmousedown: (e) => e.preventDefault(), onclick: pick(value), html: svg });
+    let list = []; // [value, title, svg-producing fn]
+    async function load() {
+      if (tab === 'all') { note.textContent = 'Loading icons…'; await loadLucide(); }
+      if (tab === 'brands') { note.textContent = 'Loading logos…'; await loadBrands(); }
+      const q = query.trim().toLowerCase();
+      if (tab === 'essentials') {
+        list = T.ICON_CHOICES.filter((n) => !q || n.includes(q)).map((n) => [n, n || 'No icon']);
+      } else if (tab === 'all') {
+        const L = R.libs().lucide || {};
+        list = Object.keys(L).filter((n) => !q || n.includes(q) || (L[n].t || '').includes(q)).map((n) => [n, n]);
+      } else {
+        const B = R.libs().brands || {};
+        list = Object.keys(B).filter((n) => !q || n.includes(q) || B[n].t.toLowerCase().includes(q)).map((n) => ['brand:' + n, B[n].t]);
+      }
+      shown = 0; grid.replaceChildren(); more();
+      note.textContent = list.length ? `${list.length.toLocaleString()} icons${tab === 'brands' ? ' · brand logos belong to their owners' : ''}` : 'No matches';
+    }
+    function more() {
+      const slice = list.slice(shown, shown + CHUNK); shown += slice.length;
+      grid.append(...slice.map(([v, t]) => btn(v, t, v ? R.icon(v) || '' : '<span class="none">∅</span>')));
+    }
+    grid.addEventListener('scroll', () => { if (grid.scrollTop + grid.clientHeight > grid.scrollHeight - 80 && shown < list.length) more(); });
+    const drawTabs = () => tabs.replaceChildren(...[['essentials', 'Essentials'], ['all', 'All icons'], ['brands', 'Brands']].map(([k, l]) => h('button', { type: 'button', class: tab === k ? 'on' : '', onclick: () => { tab = k; drawTabs(); load(); search.focus(); } }, l)));
+    let t0 = null;
+    search.addEventListener('input', () => { clearTimeout(t0); t0 = setTimeout(() => { query = search.value; if (query && tab === 'essentials') { tab = 'all'; drawTabs(); } load(); }, 120); });
+    drawTabs(); load();
     const r = anchor.getBoundingClientRect(), pw = pickerEl.offsetWidth, ph = pickerEl.offsetHeight;
     pickerEl.style.left = Math.max(8, Math.min(r.left, innerWidth - pw - 8)) + 'px';
     pickerEl.style.top = (r.bottom + ph + 12 > innerHeight ? Math.max(8, r.top - ph - 6) : r.bottom + 6) + 'px';
-    setTimeout(() => document.addEventListener('mousedown', outsidePicker, true), 0);
+    setTimeout(() => { document.addEventListener('mousedown', outsidePicker, true); search.focus(); }, 0);
   }
   const iconBtn = (current, onPick, title = 'Choose an icon') => {
     const b = h('button', { type: 'button', class: 'icon-pick', title, html: current ? R.icon(current) : '<span class="plus">+</span>' });
@@ -1025,7 +1061,9 @@ export async function mountEditor(root, id) {
   async function previewRevision(rev) {
     try {
       const r = await api.get(`/api/resumes/${id}/revisions/${rev.id}`);
-      const pd = T.normalizeDoc(r.data), changes = describe(JSON.stringify(pd), JSON.stringify(doc));
+      const pd = T.normalizeDoc(r.data);
+      await ensureIconsFor(pd);
+      const changes = describe(JSON.stringify(pd), JSON.stringify(doc));
       showPreview(pd, { kind: 'rev', id: rev.id }, `Previewing ${rev.auto ? (rev.label || 'an automatic restore point') : rev.label}`,
         `${full(rev.created_at)} · your current version is unchanged. To get back to now: ${brief(changes, 3)}`, () => restoreRevision(rev));
     } catch (e) { toast(e.message, 'err'); }
@@ -1051,7 +1089,7 @@ export async function mountEditor(root, id) {
       snapshot();
       const r = await api.post(`/api/resumes/${id}/revisions/${rev.id}/restore`);
       previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
-      doc = T.normalizeDoc(r.data); dirty = false; setStatus('All changes saved');
+      doc = T.normalizeDoc(r.data); await ensureIconsFor(doc); dirty = false; setStatus('All changes saved');
       snapshot(); hideFloats(); paintPreview(); drawPanel(); loadRevisions(); toast('Version restored');
     } catch (e) { toast(e.message, 'err'); }
   }

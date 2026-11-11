@@ -71,3 +71,10 @@ test('revision history: named versions, auto restore points, restore, tenant iso
   assert.equal((await call('PATCH', `/api/resumes/${r.id}/revisions/${v1.id}`, { label: 'Renamed' }, a)).status, 200);
   assert.equal((await call('DELETE', `/api/resumes/${r.id}/revisions/${v1.id}`, null, a)).status, 200);
 });
+
+test('icon names: library and brand icons are accepted, junk is dropped', () => {
+  const T = require('../shared/templates');
+  const d = T.normalizeDoc({ sections: [{ type: 'custom', icon: 'brand:cisco', items: [{ icon: 'router', title: 'x' }, { icon: '"><script>', title: 'y' }, { icon: 'Brand:UPPER', title: 'z' }] }] });
+  assert.equal(d.sections[0].icon, 'brand:cisco');
+  assert.deepEqual(d.sections[0].items.map((i) => i.icon), ['router', '', '']);
+});

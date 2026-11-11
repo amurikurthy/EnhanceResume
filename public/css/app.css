@@ -301,3 +301,10 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .topbar .logo, .topbar > a.btn { flex-shrink: 0; }
 
 .rev.now-step { background: color-mix(in srgb, #10b981 10%, transparent); }
+
+/* icon picker with search + tabs */
+.icon-pop { width: 372px; display: flex; flex-direction: column; gap: 8px; padding: 10px; max-height: 420px; overflow: hidden; display: flex; }
+.icon-pop .ip-search { width: 100%; }
+.ip-tabs { display: flex; gap: 4px; } .ip-tabs button { flex: 1; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); } .ip-tabs button.on { background: var(--brand-btn); border-color: var(--brand-btn); color: #fff; }
+.ip-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; overflow-y: auto; min-height: 120px; max-height: 270px; align-content: start; }
+.ip-note { text-align: center; }

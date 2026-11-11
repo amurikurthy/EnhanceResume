@@ -215,6 +215,7 @@
     'heading.size': [8, 20], 'heading.weight': [400, 800], 'heading.spacing': [0, 0.2], 'entries.titleSize': [8, 16],
   };
 
+  const iconOk = (v) => (typeof v === 'string' && (v === '' || /^(brand:)?[a-z0-9][a-z0-9-]{0,60}$/.test(v)) ? v : '');
   const num = (v, [lo, hi], d) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
   const str = (v, max = 400) => (typeof v === 'string' ? v.slice(0, max) : '');
   const HEX = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
@@ -245,14 +246,14 @@
     switch (kind) {
       case 'entries': return {
         id, title: str(it.title, 160), org: str(it.org, 160), orgLink: str(it.orgLink, 300), date: str(it.date, 60),
-        location: str(it.location, 80), logo: img(it.logo, 120000), icon: ICON_CHOICES.includes(it.icon) ? it.icon : '', text: str(it.text, 3000),
+        location: str(it.location, 80), logo: img(it.logo, 120000), icon: iconOk(it.icon), text: str(it.text, 3000),
         bullets: (Array.isArray(it.bullets) ? it.bullets : []).slice(0, MAX.bullets).map((b) => str(b, 1200)),
       };
       case 'skills': return {
         id, name: str(it.name, 80),
         tags: (Array.isArray(it.tags) ? it.tags : []).slice(0, MAX.tags).map((t) => str(t, 80)),
       };
-      case 'list': return { id, icon: ICON_CHOICES.includes(it.icon) ? it.icon : '', title: str(it.title, 200), sub: str(it.sub, 200) };
+      case 'list': return { id, icon: iconOk(it.icon), title: str(it.title, 200), sub: str(it.sub, 200) };
       case 'levels': return { id, name: str(it.name, 80), label: str(it.label, 60), level: Math.round(num(it.level, [0, 5], 3)) };
       default: return { id, text: str(it.text, 6000) };
     }
@@ -274,7 +275,7 @@
       const type = SECTION_TYPES[s.type] ? s.type : 'text';
       const kind = SECTION_TYPES[type].kind;
       return {
-        id: str(s.id, 20) || uid(), type, title: str(s.title, 80), icon: ICON_CHOICES.includes(s.icon) ? s.icon : '', column: s.column === 'side' ? 'side' : 'main',
+        id: str(s.id, 20) || uid(), type, title: str(s.title, 80), icon: iconOk(s.icon), column: s.column === 'side' ? 'side' : 'main',
         items: (Array.isArray(s.items) ? s.items : []).slice(0, MAX.items).map((it) => normItem(kind, type, it)),
       };
     });
