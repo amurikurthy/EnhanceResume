@@ -15,7 +15,7 @@ A self-hosted, multi-tenant resume builder with live preview, drag & drop editin
 ## Run
 
 ```bash
-git clone https://github.com/amurikurthy/enhanceresume.git && cd enhanceresume
+git clone https://github.com/amurikurthy/EnhanceResume.git && cd EnhanceResume
 docker compose up -d --build     # then open http://localhost:3000
 ```
 
