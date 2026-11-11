@@ -195,7 +195,7 @@
   const ENUMS = {
     layout: ['single', 'side-right', 'side-left'], pageSize: ['A4', 'Letter'],
     fontHeading: FONT_NAMES, fontBody: FONT_NAMES,
-    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'],
+    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
     'pattern.corner': ['tr', 'tl', 'br', 'bl'],
     'pattern.area': ['header', 'page'],
     'header.style': ['left', 'center', 'banner'], 'header.in': ['top', 'main'], 'header.contactsIn': ['header', 'side'],
@@ -570,6 +570,16 @@
         heading: { style: 'short', case: 'upper', size: 10.5, weight: 700 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'outline' },
       },
     },
+    {
+      id: 'mehndi', vibe: 'feminine', style: 'creative', name: 'Mehndi', desc: 'Magenta henna flourish, light and warm.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Playfair Display', fontBody: 'Nunito', fontSize: 9.5,
+        colors: { accent: '#c2185b', heading: '#4a1030', text: '#3a2630', muted: '#7d6370', bg: '#fffcfd', line: '#f3cfdd', chipBg: '#fff3f8', chipBorder: '#efb4cb', headerBg: '#c2185b' },
+        pattern: { type: 'henna', area: 'page', color: '#c2185b', opacity: 0.32, scale: 0.85, corner: 'tr' },
+        header: { style: 'left', photoShape: 'circle', photoSize: 27, nameCase: 'title', nameSize: 27 },
+        heading: { style: 'short', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'outline' },
+      },
+    },
   ];
 
 
@@ -706,8 +716,8 @@
     FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
     TEMPLATE_FACETS, COLOR_FAMILIES, templateInfo,
     setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
-    ACCENT_GROUPS: [['Soft & floral', ['floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
-    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'],
+    ACCENT_GROUPS: [['Soft & floral', ['henna', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
+    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
     deepMerge, clone, uid, mix, luminance,
   };
 });

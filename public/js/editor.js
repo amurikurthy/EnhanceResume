@@ -836,7 +836,7 @@ export async function mountEditor(root, id) {
       return h('button', { type: 'button', class: 'pat' + (S().pattern.type === t ? ' on' : ''), title: t,
         onclick: () => {
           S().pattern.type = t;
-          if (acc) { S().pattern.area = 'page'; if (S().pattern.opacity > 0.25) S().pattern.opacity = 0.14; if (S().pattern.scale > 1.6) S().pattern.scale = 1; }
+          if (acc) { S().pattern.area = 'page'; S().pattern.opacity = t === 'henna' ? 0.3 : S().pattern.opacity > 0.25 ? 0.14 : S().pattern.opacity; S().pattern.scale = t === 'henna' ? 0.85 : S().pattern.scale > 1.6 ? 1 : S().pattern.scale; }
           touch(); drawPanel();
         }, style }, t === 'none' ? h('span', { class: 'muted' }, 'None') : null);
     };

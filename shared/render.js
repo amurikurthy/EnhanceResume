@@ -136,7 +136,7 @@
 
 
   /* ---------- subtle corner accents: one piece of fine line art per page (not a tiled texture) ---------- */
-  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'];
+  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'];
   function accentArt(type, col, op) { // drawn on a 210x297 page, anchored top-right
     const st = (w) => `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${op}"`;
     const ring = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" ${st(0.35)}/>`;
@@ -242,6 +242,26 @@
         for (let x = 110; x <= 214; x += 8) { y = 20 + layer * 15 + (rnd() - 0.5) * (10 + layer * 2) - (x - 110) * 0.05 * (layer % 2 ? 1 : -1); d += `L${x} ${y.toFixed(1)}`; }
         b += `<path d="${d}" fill="none" stroke="${col}" stroke-width="0.35" stroke-linejoin="round" stroke-opacity="${(op * (1 - layer * 0.14)).toFixed(3)}"/>`;
       }
+
+    } else if (type === 'henna') {
+      // hand-drawn henna flourish: a sweeping line that ends in a half-mandala, with dotted arcs, dots and tiny hearts
+      const cx = 190, cy = 34, pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+      b += `<path d="M108 30C122 24 132 42 152 41S176 38 ${cx - 15} ${cy + 3}" ${st(0.55)}/>`;
+      b += `<path d="M${cx + 15} ${cy + 3}C202 ${cy + 4} 210 ${cy + 1} 220 ${cy - 5}" ${st(0.55)}/>`;
+      [3.6, 7.2, 10.8].forEach((r) => { b += `<path d="M${cx - r} ${cy}A${r} ${r} 0 0 1 ${cx + r} ${cy}" ${st(0.4)}/>`; });
+      for (let i = 0; i <= 12; i++) { const [x, y] = pt(14.2, Math.PI + (Math.PI * i) / 12); b += dot(x.toFixed(1), y.toFixed(1), 0.65); }
+      for (let i = 0; i <= 8; i++) { const [x, y] = pt(5.4, Math.PI + (Math.PI * i) / 8); b += dot(x.toFixed(1), y.toFixed(1), 0.45, 0.8); }
+      b += dot(cx, cy - 1.4, 1.1);
+      const petals = 8;
+      for (let k = 0; k < petals; k++) {
+        const th = Math.PI + 0.16 + ((Math.PI - 0.32) * k) / (petals - 1), r1 = 17.5, r2 = 36 + (k % 2 ? -3 : 1);
+        const B = pt(r1, th), T = pt(r2, th), m = pt((r1 + r2) / 2, th), px = -Math.sin(th) * 6.2, py = Math.cos(th) * 6.2;
+        b += `<path d="M${B[0].toFixed(1)} ${B[1].toFixed(1)}Q${(m[0] + px).toFixed(1)} ${(m[1] + py).toFixed(1)} ${T[0].toFixed(1)} ${T[1].toFixed(1)}Q${(m[0] - px).toFixed(1)} ${(m[1] - py).toFixed(1)} ${B[0].toFixed(1)} ${B[1].toFixed(1)}Z" ${st(0.4)}/>`;
+        const I = pt(r1 + 4, th), J = pt(r2 - 8, th); b += `<path d="M${I[0].toFixed(1)} ${I[1].toFixed(1)}L${J[0].toFixed(1)} ${J[1].toFixed(1)}" ${st(0.22)}/>`;
+      }
+      for (let i = 0; i < 9; i++) { const x = 108 + i * 4.4, y = 16 + 3.2 * Math.sin((i / 8) * Math.PI); b += dot(x.toFixed(1), y.toFixed(1), (0.95 - i * 0.05).toFixed(2)); }
+      [[122, 12], [142, 12], [160, 20], [112, 66], [132, 72], [152, 66], [172, 74], [198, 70], [204, 26], [190, 8], [108, 46], [132, 38], [168, 30]].forEach(([x, y], i) => { b += dot(x, y, i % 3 ? 0.55 : 0.85, 0.9); });
+      [[114, 52], [200, 88], [134, 6], [160, 90]].forEach(([x, y]) => { b += `<path transform="translate(${x} ${y}) scale(1.1)" d="M0 .7C-.9 -.9 -3.2 .1 0 3C3.2 .1 .9 -.9 0 .7Z" fill="${col}" fill-opacity="${(op * 0.85).toFixed(3)}"/>`; });
     }
     return b;
   }
@@ -251,8 +271,9 @@
   function patternLayer(p, ctx) {
     if (!p || p.type === 'none') return null;
     if (ACCENTS.includes(p.type)) {
-      const t = CORNER_T[p.corner] || '';
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" preserveAspectRatio="xMaxYMin slice"><g${t ? ` transform="${t}"` : ''}>${accentArt(p.type, p.color, p.opacity)}</g></svg>`;
+      const t = CORNER_T[p.corner] || '', k = ctx && ctx.pw ? Math.min(3, Math.max(0.4, p.scale || 1)) : 1;
+      const art = k === 1 ? accentArt(p.type, p.color, p.opacity) : `<g transform="translate(210 0) scale(${k}) translate(-210 0)">${accentArt(p.type, p.color, p.opacity)}</g>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" preserveAspectRatio="xMaxYMin slice"><g${t ? ` transform="${t}"` : ''}>${art}</g></svg>`;
       const uri = "url('data:image/svg+xml," + encodeURIComponent(svg).replace(/'/g, '%27') + "')";
       const flip = p.corner === 'br' || p.corner === 'bl', left = p.corner === 'tl' || p.corner === 'bl';
       const pos = `${left ? 'left' : 'right'} ${flip ? 'bottom' : 'top'}`;
