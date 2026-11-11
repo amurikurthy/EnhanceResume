@@ -83,11 +83,11 @@ test('profile: details and photo flow into new resumes, validation, no password 
   const a = await signup('prof-a@example.com'), b = await signup('prof-b@example.com');
   const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
   assert.equal((await call('PUT', '/api/profile', { photo: 'javascript:alert(1)' }, a)).status, 400);
-  const up = await (await call('PUT', '/api/profile', { name: 'Pat Doe', photo: png, profile: { headline: 'Network Engineer', phone: '555-1', linkedin: 'linkedin.com/in/pat', location: 'Chicago, IL' } }, a)).json();
+  const up = await (await call('PUT', '/api/profile', { name: 'Pat Doe', photo: png, profile: { headline: 'Marketing Manager', phone: '555-1', linkedin: 'linkedin.com/in/pat', location: 'Chicago, IL' } }, a)).json();
   assert.equal(up.user.name, 'Pat Doe'); assert.equal(up.user.photo, png);
   assert.equal((await (await call('GET', '/api/profile', null, b)).json()).user.photo, '', 'profiles are per account');
   const r = await (await call('POST', '/api/resumes', { title: 'X', blank: true }, a)).json();
-  assert.equal(r.data.header.name, 'Pat Doe'); assert.equal(r.data.header.title, 'Network Engineer'); assert.equal(r.data.header.photoMode, 'profile');
+  assert.equal(r.data.header.name, 'Pat Doe'); assert.equal(r.data.header.title, 'Marketing Manager'); assert.equal(r.data.header.photoMode, 'profile');
   assert.equal(r.data.header.photo, '', 'the photo stays linked, it is not copied into the resume');
   assert.ok(r.data.header.contacts.some((c) => c.icon === 'phone' && c.text === '555-1'));
   assert.ok(r.data.header.contacts.some((c) => c.icon === 'mail' && c.text === 'prof-a@example.com'));

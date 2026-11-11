@@ -2,7 +2,7 @@ import * as api from './api.js';
 import { h, toast, modal, photoDataUrl } from './ui.js';
 import { state } from './app.js';
 
-const FIELDS = [['headline', 'Headline / job title', 'e.g. Network Infrastructure Engineer'], ['phone', 'Phone', '555-010-2030'], ['location', 'Location', 'Chicago, IL'],
+const FIELDS = [['headline', 'Headline / job title', 'e.g. Marketing Manager'], ['phone', 'Phone', '555-010-2030'], ['location', 'Location', 'Chicago, IL'],
   ['linkedin', 'LinkedIn', 'linkedin.com/in/you'], ['website', 'Website', 'example.com'], ['github', 'GitHub', 'github.com/you']];
 
 export const initials = (u) => ((u && u.name) || '?').trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
