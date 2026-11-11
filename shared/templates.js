@@ -194,7 +194,7 @@
   const ENUMS = {
     layout: ['single', 'side-right', 'side-left'], pageSize: ['A4', 'Letter'],
     fontHeading: FONT_NAMES, fontBody: FONT_NAMES,
-    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles'],
+    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network'],
     'pattern.area': ['header', 'page'],
     'header.style': ['left', 'center', 'banner'], 'header.in': ['top', 'main'], 'header.contactsIn': ['header', 'side'],
     'header.align': ['left', 'center', 'right'],

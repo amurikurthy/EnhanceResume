@@ -114,6 +114,28 @@
       case 'waves': w = 40; h = 14; body = `<path d="M0 7Q10 0 20 7T40 7" fill="none" stroke="${col}" stroke-width="1.2" ${a}/>`; break;
       case 'zigzag': w = 16; h = 9; body = `<path d="M0 8L8 1L16 8" fill="none" stroke="${col}" stroke-width="1.2" ${a}/>`; break;
       case 'triangles': w = h = 26; body = `<path d="M13 4L22 20H4Z" fill="none" stroke="${col}" stroke-width="1" ${a}/>`; break;
+      case 'circuit': { // PCB traces with 45-degree bends and via rings; edges line up so the tile repeats seamlessly
+        w = h = 60;
+        const st = `fill="none" stroke="${col}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" ${a}`;
+        body = `<g ${st}>` +
+          '<path d="M0 14H20L32 26V44L44 56V60"/><path d="M44 0V6L52 14H60"/>' +
+          '<path d="M0 40H4L8 44V60"/><path d="M8 0V4L12 8H20"/>' +
+          '<path d="M60 30H50L46 34H38"/><path d="M0 30H2"/><path d="M24 60V52L30 46"/><path d="M24 0V4"/>' +
+          '</g>' +
+          `<g fill="none" stroke="${col}" stroke-width="1.2" ${a}>` +
+          '<circle cx="0" cy="14" r="2.4"/><circle cx="60" cy="14" r="2.4"/><circle cx="20" cy="8" r="2.4"/><circle cx="38" cy="30" r="2.4"/><circle cx="30" cy="46" r="2.4"/><circle cx="2" cy="30" r="2.4"/>' +
+          '</g>' +
+          `<g fill="${col}" ${a}><circle cx="32" cy="26" r="1.4"/><circle cx="44" cy="56" r="1.4"/><circle cx="8" cy="44" r="1.4"/><circle cx="52" cy="14" r="1.4"/></g>`;
+        break;
+      }
+      case 'network': { // nodes and links; links run to shared corner nodes so tiles join without seams
+        w = h = 90;
+        const nodes = [[22, 24], [60, 16], [70, 58], [30, 64], [50, 40]];
+        const links = [[[0, 0], [22, 24]], [[22, 24], [60, 16]], [[60, 16], [90, 0]], [[60, 16], [50, 40]], [[22, 24], [50, 40]], [[50, 40], [70, 58]], [[50, 40], [30, 64]], [[30, 64], [0, 90]], [[70, 58], [90, 90]], [[60, 16], [70, 58]], [[22, 24], [30, 64]]];
+        body = `<g fill="none" stroke="${col}" stroke-width="1" ${a}>` + links.map(([p, q]) => `<path d="M${p[0]} ${p[1]}L${q[0]} ${q[1]}"/>`).join('') + '</g>' +
+          `<g fill="${col}" ${a}>` + nodes.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 2 ? 2.6 : 3.4}"/>`).join('') + [[0, 0], [90, 0], [0, 90], [90, 90]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('') + '</g>';
+        break;
+      }
       case 'circles': {
         w = h = 420; repeat = 'no-repeat'; pos = 'right -80px top -80px';
         for (let r = 40; r <= 200; r += 32) body += `<circle cx="210" cy="210" r="${r}" fill="none" stroke="${col}" stroke-width="2" ${a}/>`;
