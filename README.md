@@ -1,6 +1,6 @@
 # EnhanceResume
 
-A self-hosted, multi-tenant resume builder with live preview, drag & drop editing, 18 templates, full design control and server-side PDF export. Ships as a single Docker container.
+A self-hosted, multi-tenant resume builder with live preview, drag & drop editing, 29 templates, full design control and server-side PDF export. Ships as a single Docker container.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
@@ -124,7 +124,9 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 
 ## Features
 
-- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose, Midnight Dark, Charcoal Gold, Circuit Board, Network Ops, Academic CV, Sunset Bold, Slate Modern, Forest Dark, Plum Pro, Ink & Paper – previewed with your own content.
+- **Template categories**: filter the gallery by tone (light / dark), vibe (masculine / feminine / neutral), look & feel (classic, modern, minimal, bold, elegant, creative) and colour family. The filters apply in the new-resume dialog and the editor's Templates tab.
+- **Reset buttons**: every Design control shows a small ↺ next to it once it differs from the template's default; each group has its own reset, and there is a *Reset whole design* button (Ctrl+Z undoes it).
+- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose, Midnight Dark, Charcoal Gold, Circuit Board, Network Ops, Academic CV, Sunset Bold, Slate Modern, Forest Dark, Plum Pro, Ink & Paper, Blush, Lavender, Rose Gold, Botanical, Peony, Blueprint, Steel, Ember, Ranger, Carbon, Soft Mint – previewed with your own content.
 - **Dark mode**: the app UI follows your system setting with a toggle (☾/☀) in the top bar. Resumes have their own light & dark themes (Midnight, Charcoal, Forest, Plum, Paper, Mist) plus 12 accent colors, applied from the Design tab.
 - **Profile**: click your name (top right) to set your profile photo, headline and contact details. New resumes are filled in from it, and the profile photo is linked into every resume by default (choose *Custom* or *No photo* per resume to override). Changing the profile photo updates every resume that uses it, including PDFs.
 - **Photos**: upload a profile photo (auto square-cropped) from *Header & contact*; choose circle / rounded / square, left or right, and size in *Design → Header*, or hide it.
@@ -137,7 +139,7 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 - **Icons**: pick an icon for any section heading, experience/education entry, or list item (or upload a logo instead). The picker searches about 2,000 [Lucide](https://lucide.dev) icons and 3,400 brand logos from [Simple Icons](https://simpleicons.org), all bundled offline (loaded only when used, and embedded in the PDF). Brand logos remain the property of their owners.
 - **Drag & drop**: reorder sections, move them between main column and sidebar, reorder entries, bullets, skill groups, skills/tags, contacts.
 - **Sections**: summary, experience, education, projects, volunteering, publications, skills (chips/pills/commas/pipes), certifications (with icons), achievements, interests, languages (dots/bars/text), custom text. Entries support logos, links, `**bold**`/`*italic*` markup.
-- **Design**: 12 color themes + full custom colors, 20 bundled fonts (offline), margins, spacing, font size, line height, column width, sidebar fill, header styles (left/center/banner), photo shape/size/position, heading styles, bullet styles, date styles, background patterns (dots, grid, lines, diagonal, crosshatch, circles, waves, zigzag, triangles, circuit board, network) for header or whole page, plus six subtle one-per-page corner accents (arcs, traces, contour, node map, fading dots, fading lines), A4 / US Letter.
+- **Design**: 12 color themes + full custom colors, 20 bundled fonts (offline), margins, spacing, font size, line height, column width, sidebar fill, header styles (left/center/banner), photo shape/size/position, heading styles, bullet styles, date styles, background patterns (dots, grid, lines, diagonal, crosshatch, circles, waves, zigzag, triangles, circuit board, network) for header or whole page, plus 18 subtle one-per-page corner accents: soft & floral (sprig, blossoms, swirl, scallop, watercolor wash, lace), bold & technical (blueprint, hexagons, chevrons, low-poly, compass, ridgeline) and neutral (arcs, traces, contour, node map, fading dots, fading lines), A4 / US Letter.
 - **PDF**: real vector PDF with selectable text and clickable links, rendered by headless Chromium from the exact same renderer as the preview; margins repeat on every page.
 - **Multi-tenancy**: every query is scoped to the signed-in account; scrypt password hashing, HttpOnly SameSite sessions, CSRF header, login rate limiting. Resume JSON import/export on the dashboard.
 

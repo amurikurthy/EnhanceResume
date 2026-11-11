@@ -4,6 +4,7 @@ import { topbar } from './dashboard.js';
 import { ensureIconsFor, loadLucide, loadBrands } from './icons.js';
 import { state } from './app.js';
 import { openProfile } from './profile.js';
+import { templateBrowser } from './template-browser.js';
 
 const T = window.ERT, R = window.ERR;
 const MM = 96 / 25.4;
@@ -41,6 +42,7 @@ export async function mountEditor(root, id) {
     clearTimeout(timer); timer = setTimeout(save, 800);
     scheduleSnapshot();
     schedulePreview();
+    syncResets();
   }
   const onKey = (e) => {
     const mod = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
@@ -70,6 +72,7 @@ export async function mountEditor(root, id) {
     star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
     camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
     cols: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+    reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   };
   const ibtn = (name, title, fn, cls = '') => h('button', { type: 'button', class: 'fbtn ' + cls, title, 'aria-label': title, onmousedown: (e) => e.preventDefault(), onclick: fn, html: SVG(ICO[name]) });
 
@@ -529,7 +532,20 @@ export async function mountEditor(root, id) {
   stage.addEventListener('mousedown', (e) => { if (e.target === stage || e.target === zoomWrap) { if (document.activeElement && content.contains(document.activeElement)) document.activeElement.blur(); } });
 
   /* ---------------- generic form controls ---------------- */
-  const field = (label, el, cls) => h('label', { class: 'f ' + (cls || '') }, h('span', null, label), el);
+  /* reset buttons are (re)mounted into a host element described by data-rinfo, so they update live while sliders move */
+  function mountReset(host, info) {
+    host.querySelectorAll(':scope > .rst').forEach((b) => b.remove());
+    const b = !info ? null : info.path ? resetBtn(info.path) : resetMulti(info.keys, info.label);
+    if (b) host.append(b);
+    if (info) host.dataset.rinfo = JSON.stringify(info);
+  }
+  function syncResets() {
+    if (tab !== 'design') return;
+    panelBody.querySelectorAll('[data-rinfo]').forEach((el) => mountReset(el, JSON.parse(el.dataset.rinfo)));
+    const slot = panelBody.querySelector('.reset-all-slot');
+    if (slot) slot.replaceChildren(...[resetAllBtn()].filter(Boolean));
+  }
+  const field = (label, el, cls, info) => { const head = h('span', { class: 'f-head' }, label); if (info) mountReset(head, info); return h('label', { class: 'f ' + (cls || '') }, head, el); };
   function input(label, get, set, o = {}) {
     const el = h(o.area ? 'textarea' : 'input', { type: o.area ? null : 'text', value: get(), placeholder: o.ph || '', rows: o.rows || 3, maxlength: o.max || 300, class: o.area ? 'auto' : '' });
     el.addEventListener('input', () => { set(el.value); touch(); });
@@ -539,39 +555,57 @@ export async function mountEditor(root, id) {
   function setP(path, v) { const ks = path.split('.'); let o = doc.settings; while (ks.length > 1) o = o[ks.shift()]; o[ks[0]] = v; }
   const getP = (path) => getPath(doc.settings, path);
 
+  /* ---- reset to the template's default values ---- */
+  const baseSettings = () => Object.assign(T.deepMerge(T.defaultSettings(), (T.TEMPLATES.find((x) => x.id === S().template) || T.TEMPLATES[0]).patch), { template: S().template });
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const show = (v) => (typeof v === 'boolean' ? (v ? 'on' : 'off') : typeof v === 'object' ? 'template default' : String(v));
+  const rstBtn = (title, onclick, cls = '') => h('button', { type: 'button', class: 'rst ' + cls, title, 'aria-label': title, onmousedown: (e) => e.preventDefault(), onclick: (e) => { e.preventDefault(); e.stopPropagation(); onclick(); }, html: SVG(ICO.reset) });
+  function resetBtn(path) { // one setting
+    const d = getPath(baseSettings(), path);
+    if (same(getP(path), d)) return null;
+    return rstBtn(`Reset to default (${show(d)})`, () => { setP(path, T.clone(d)); touch(); drawPanel(); });
+  }
+  function resetMulti(keys, label = 'Reset to default') { // several top-level settings at once
+    const base = baseSettings();
+    if (keys.every((k) => same(S()[k], base[k]))) return null;
+    return rstBtn(label, () => { keys.forEach((k) => { S()[k] = T.clone(base[k]); }); touch(); drawPanel(); });
+  }
+  const GROUP_KEYS = { 'Layout': ['layout', 'sidebarFilled', 'columnRatio', 'pageSize'], 'Colors': ['colors'], 'Fonts & text': ['fontHeading', 'fontBody', 'fontSize', 'lineHeight'],
+    'Margins & spacing': ['margins', 'sectionGap', 'entryGap', 'columnGap'], 'Background pattern': ['pattern'], 'Header': ['header', 'contactIcons'], 'Section headings': ['heading'], 'Entries, skills & lists': ['entries', 'skills', 'levels'] };
+
   function seg(label, path, opts, after) { // segmented control; opts: [[value,label],...]
     const wrap = h('div', { class: 'seg' });
     const draw = () => wrap.replaceChildren(...opts.map(([v, l]) => h('button', { type: 'button', class: getP(path) === v ? 'on' : '', onclick: () => { setP(path, v); touch(); draw(); if (after) after(); } }, l)));
     draw();
-    return field(label, wrap);
+    return field(label, wrap, '', label ? { path } : null);
   }
   function range(label, path, min, max, step, unit = '') {
     const out = h('output', null, getP(path) + unit);
     const el = h('input', { type: 'range', min, max, step, value: getP(path) });
     el.addEventListener('input', () => { setP(path, Number(el.value)); out.textContent = el.value + unit; touch(); });
-    return field(label, h('div', { class: 'rng' }, el, out));
+    return field(label, h('div', { class: 'rng' }, el, out), '', { path });
   }
   function color(label, path) {
     const el = h('input', { type: 'color', value: getP(path) });
     const hex = h('input', { type: 'text', class: 'hex', value: getP(path), maxlength: 7 });
     el.addEventListener('input', () => { setP(path, el.value); hex.value = el.value; touch(); });
     hex.addEventListener('change', () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) { setP(path, hex.value); el.value = hex.value; touch(); } else hex.value = getP(path); });
-    return field(label, h('div', { class: 'clr' }, el, hex));
+    return field(label, h('div', { class: 'clr' }, el, hex), '', { path });
   }
   function select(label, path, opts) {
     const el = h('select', null, opts.map(([v, l]) => h('option', { value: v, selected: getP(path) === v, style: path.startsWith('font') ? { fontFamily: `'${v}'` } : null }, l)));
     el.addEventListener('change', () => { setP(path, el.value); touch(); });
-    return field(label, el);
+    return field(label, el, '', { path });
   }
   function toggle(label, path) {
     const el = h('input', { type: 'checkbox', checked: !!getP(path) });
     el.addEventListener('change', () => { setP(path, el.checked); touch(); });
-    return h('label', { class: 'check' }, el, label);
+    const box = h('label', { class: 'check' }, el, label); mountReset(box, { path }); return box;
   }
   // open/closed state of collapsible groups survives panel redraws (picking a pattern, color theme, layout... redraws the panel)
   const openState = new Map();
   const remember = (key, d) => { d.addEventListener('toggle', () => openState.set(key, d.open)); return d; };
-  const group = (name, open, ...kids) => remember(name, h('details', { class: 'grp', open: openState.has(name) ? openState.get(name) : open }, h('summary', null, name), h('div', { class: 'grp-b' }, kids)));
+  const group = (name, open, ...kids) => remember(name, h('details', { class: 'grp', open: openState.has(name) ? openState.get(name) : open }, (() => { const sm = h('summary', null, h('span', null, name)); if (GROUP_KEYS[name]) mountReset(sm, { keys: GROUP_KEYS[name], label: `Reset “${name}” to the template's defaults` }); return sm; })(), h('div', { class: 'grp-b' }, kids)));
 
   /* ---------------- sortable lists (drag & drop) ---------------- */
   // arr is the backing data array; renderRow(i, redraw) builds a draggable row. Rows can move between lists sharing a group.
@@ -774,6 +808,11 @@ export async function mountEditor(root, id) {
     return wrap;
   }
 
+  function resetAllBtn() {
+    if (same(S(), baseSettings())) return null;
+    const tplName = (T.TEMPLATES.find((x) => x.id === S().template) || {}).name || 'template';
+    return h('button', { type: 'button', class: 'btn small reset-all', onclick: () => { doc.settings = baseSettings(); touch(); drawPanel(); toast('Design reset. Ctrl+Z undoes it'); } }, h('span', { html: SVG(ICO.reset) }), `Reset whole design to ${tplName} defaults`);
+  }
   /* design tab helpers: layout thumbnails, background tiles, simple sliders */
   function layoutPicker() {
     const opts = [['Single', 'single', 100, 'single'], ['Sidebar right', 'side-right', 70, 'r'], ['Wide right', 'side-right', 56, 'r'], ['Sidebar left', 'side-left', 70, 'l']];
@@ -791,7 +830,7 @@ export async function mountEditor(root, id) {
     const accents = T.ACCENT_PATTERNS, tiles = T.ENUMS['pattern.type'].filter((t) => t !== 'none' && !accents.includes(t));
     const tile = (t) => {
       const acc = accents.includes(t);
-      const layer = t === 'none' ? null : R.patternLayer({ type: t, color: '#64748b', opacity: acc ? 0.9 : 0.7, scale: t === 'circles' ? 0.2 : 0.75, corner: S().pattern.corner });
+      const layer = t === 'none' ? null : R.patternLayer({ type: t, color: '#64748b', opacity: t === 'wash' ? 0.3 : acc ? 0.9 : 0.7, scale: t === 'circles' ? 0.2 : 0.75, corner: S().pattern.corner });
       const style = !layer ? null : acc ? { backgroundImage: layer.img, backgroundSize: '230% auto', backgroundRepeat: 'no-repeat', backgroundPosition: layer.pos }
         : { backgroundImage: layer.img, backgroundSize: layer.size, backgroundRepeat: layer.repeat, backgroundPosition: t === 'circles' ? 'right -6px top -6px' : layer.pos };
       return h('button', { type: 'button', class: 'pat' + (S().pattern.type === t ? ' on' : ''), title: t,
@@ -801,13 +840,14 @@ export async function mountEditor(root, id) {
           touch(); drawPanel();
         }, style }, t === 'none' ? h('span', { class: 'muted' }, 'None') : null);
     };
-    return h('div', null, h('div', { class: 'pat-sub' }, 'None & subtle accents (one per page)'), h('div', { class: 'pat-grid' }, [tile('none'), ...accents.map(tile)]),
+    return h('div', null, h('div', { class: 'pat-sub' }, 'None'), h('div', { class: 'pat-grid' }, [tile('none')]),
+      ...T.ACCENT_GROUPS.flatMap(([name, list]) => [h('div', { class: 'pat-sub' }, `Subtle accents · ${name}`), h('div', { class: 'pat-grid' }, list.map(tile))]),
       h('div', { class: 'pat-sub' }, 'Full-page textures'), h('div', { class: 'pat-grid' }, tiles.map(tile)));
   }
-  function simpleRange(label, get, set, min, max, step, lo, hi) {
+  function simpleRange(label, get, set, min, max, step, lo, hi, resetKeys) {
     const el = h('input', { type: 'range', min, max, step, value: get() });
     el.addEventListener('input', () => { set(Number(el.value)); touch(); });
-    return field(label, h('div', null, h('div', { class: 'rng' }, el), h('div', { class: 'rng-ends' }, h('span', null, lo), h('span', null, hi))));
+    return field(label, h('div', null, h('div', { class: 'rng' }, el), h('div', { class: 'rng-ends' }, h('span', null, lo), h('span', null, hi))), '', resetKeys ? { keys: resetKeys, label: 'Reset to default' } : null);
   }
 
   /* ---------------- design tab ---------------- */
@@ -819,6 +859,7 @@ export async function mountEditor(root, id) {
       h('span', { class: 'tc-prev', style: { background: t.colors.bg, borderColor: t.colors.line } }, h('i', { style: { background: t.colors.accent } }), h('i', { style: { background: t.colors.heading, opacity: .85 } }), h('i', { style: { background: t.colors.muted, width: '60%' } })), h('small', null, t.name))));
     const patTypes = T.ENUMS['pattern.type'].map((t) => [t, t[0].toUpperCase() + t.slice(1)]);
     return h('div', { class: 'tab-content' },
+      h('div', { class: 'reset-all-slot' }, resetAllBtn() || []),
       group('Layout', true,
         h('div', { class: 'f-lbl' }, 'Column layout'), layoutPicker(),
         s.layout !== 'single' ? toggle('Filled sidebar background', 'sidebarFilled') : null,
@@ -834,8 +875,8 @@ export async function mountEditor(root, id) {
         select('Heading font', 'fontHeading', T.FONTS.map((f) => [f.name, f.name])), select('Body font', 'fontBody', T.FONTS.map((f) => [f.name, f.name])),
         range('Font size', 'fontSize', 7.5, 13, 0.1, 'pt'), range('Line height', 'lineHeight', 1.15, 1.9, 0.01)),
       group('Margins & spacing', true,
-        simpleRange('Page margins', () => Math.round((s.margins.top + s.margins.bottom + s.margins.left + s.margins.right) / 4), (v) => { s.margins.top = s.margins.bottom = v; s.margins.left = s.margins.right = v; }, 4, 26, 1, 'narrow', 'wide'),
-        simpleRange('Section spacing', () => s.sectionGap, (v) => { s.sectionGap = v; s.entryGap = Math.round(v * 0.5 * 2) / 2; }, 2, 12, 0.5, 'compact', 'more space'),
+        simpleRange('Page margins', () => Math.round((s.margins.top + s.margins.bottom + s.margins.left + s.margins.right) / 4), (v) => { s.margins.top = s.margins.bottom = v; s.margins.left = s.margins.right = v; }, 4, 26, 1, 'narrow', 'wide', ['margins']),
+        simpleRange('Section spacing', () => s.sectionGap, (v) => { s.sectionGap = v; s.entryGap = Math.round(v * 0.5 * 2) / 2; }, 2, 12, 0.5, 'compact', 'more space', ['sectionGap', 'entryGap']),
         remember('adv', h('details', { class: 'adv', open: openState.get('adv') === true }, h('summary', null, 'Fine-tune margins and spacing'),
         range('Top margin', 'margins.top', 0, 35, 1, 'mm'), range('Bottom margin', 'margins.bottom', 0, 35, 1, 'mm'),
         range('Left margin', 'margins.left', 0, 35, 1, 'mm'), range('Right margin', 'margins.right', 0, 35, 1, 'mm'),
@@ -994,14 +1035,16 @@ export async function mountEditor(root, id) {
 
   /* ---------------- templates tab ---------------- */
   function templatesTab() {
-    const grid = h('div', { class: 'tpl-grid in-panel' }, T.TEMPLATES.map((t) => {
-      const preview = T.applyTemplate(doc, t.id);
-      return h('button', { class: 'tpl' + (S().template === t.id ? ' on' : ''), onclick: async () => {
-        if (S().template !== t.id && !(await confirmDlg('Apply template', 'This switches the design (layout, fonts, colors). Your content is kept.', 'Apply'))) return;
+    let browser;
+    browser = templateBrowser({
+      sampleFor: (t) => T.applyTemplate(doc, t.id), getCurrent: () => S().template, width: 120,
+      onPick: async (t) => {
+        if (S().template === t.id) return;
+        if (!(await confirmDlg('Apply template', 'This switches the design (layout, fonts, colors). Your content is kept.', 'Apply'))) return;
         doc = T.applyTemplate(doc, t.id); touch(); drawPanel();
-      } }, thumb(preview, 150), h('b', null, t.name), h('small', null, t.desc));
-    }));
-    return h('div', { class: 'tab-content' }, h('p', { class: 'muted pad' }, 'Previews use your own content. Switching templates keeps your text but resets design options.'), grid);
+      },
+    });
+    return h('div', { class: 'tab-content' }, h('p', { class: 'muted pad' }, 'Previews use your own content. Switching templates keeps your text but resets design options.'), browser);
   }
 
   /* ---------------- version history drawer ---------------- */

@@ -2,6 +2,7 @@ import * as api from './api.js';
 import { h, toast, modal, confirmDlg, thumb, downloadBlob, themeButton } from './ui.js';
 import { state, logout } from './app.js';
 import { ensureIconsFor } from './icons.js';
+import { templateBrowser } from './template-browser.js';
 import { openProfile, avatar, firstName } from './profile.js';
 
 const T = window.ERT;
@@ -22,15 +23,12 @@ function userChip() {
 async function newResumeDialog() {
   let tpl = 'classic', blank = false;
   const titleIn = h('input', { type: 'text', value: 'My resume', maxlength: 100 });
-  const grid = h('div', { class: 'tpl-grid' });
-  const draw = () => grid.replaceChildren(...T.TEMPLATES.map((t) => h('button', { class: 'tpl' + (t.id === tpl ? ' on' : ''), onclick: () => { tpl = t.id; draw(); } },
-    thumb(T.sampleDoc(t.id), 150), h('b', null, t.name), h('small', null, t.desc))));
-  draw();
+  const browser = templateBrowser({ sampleFor: (t) => T.sampleDoc(t.id), getCurrent: () => tpl, onPick: (t) => { tpl = t.id; }, width: 150 });
   const body = h('div', null,
     h('label', null, 'Resume name', titleIn),
-    h('div', { class: 'field-lbl' }, 'Choose a template (you can change it any time)'), grid,
+    h('div', { class: 'field-lbl' }, 'Choose a template (you can change it any time)'), browser,
     h('label', { class: 'check' }, h('input', { type: 'checkbox', onchange: (e) => { blank = e.target.checked; } }), 'Start with a blank resume instead of sample content'));
-  const ok = await modal('New resume', body, [{ label: 'Cancel', value: false }, { label: 'Create resume', value: true, kind: 'primary' }]);
+  const ok = await modal('New resume', body, [{ label: 'Cancel', value: false }, { label: 'Create resume', value: true, kind: 'primary' }], { wide: true });
   if (!ok) return null;
   return api.post('/api/resumes', { title: titleIn.value, template: tpl, blank });
 }

@@ -64,13 +64,13 @@
     { id: 'burgundy', name: 'Burgundy', accent: '#7b1e3a' },
     { id: 'orange', name: 'Sunset', accent: '#ea580c' },
     { id: 'gold', name: 'Gold', accent: '#b7791f' },
-    { id: 'slate', name: 'Slate', accent: '#475569' },
+    { id: 'slate', vibe: 'neutral', style: 'modern', name: 'Slate', accent: '#475569' },
     { id: 'mono', name: 'Mono', accent: '#111111' },
   ];
 
   /* ---------- full colour themes (light & dark) ---------- */
   const THEMES = [
-    { id: 'midnight', name: 'Midnight', dark: true, colors: { accent: '#38bdf8', text: '#e2e8f0', heading: '#ffffff', muted: '#94a3b8', bg: '#0f172a', sidebarBg: '#17223b', sideText: '#e2e8f0', sideAccent: '#7dd3fc', headerBg: '#1e3a5f', headerText: '#ffffff', line: '#2b3a55', chipBg: '#16213a', chipBorder: '#33425f' } },
+    { id: 'midnight', vibe: 'masculine', style: 'modern', name: 'Midnight', dark: true, colors: { accent: '#38bdf8', text: '#e2e8f0', heading: '#ffffff', muted: '#94a3b8', bg: '#0f172a', sidebarBg: '#17223b', sideText: '#e2e8f0', sideAccent: '#7dd3fc', headerBg: '#1e3a5f', headerText: '#ffffff', line: '#2b3a55', chipBg: '#16213a', chipBorder: '#33425f' } },
     { id: 'charcoal', name: 'Charcoal', dark: true, colors: { accent: '#f5b942', text: '#e5e5e7', heading: '#ffffff', muted: '#a1a1a6', bg: '#1c1c1e', sidebarBg: '#262629', sideText: '#e5e5e7', sideAccent: '#f5b942', headerBg: '#2c2c2e', headerText: '#ffffff', line: '#3a3a3d', chipBg: '#262629', chipBorder: '#46464a' } },
     { id: 'forest', name: 'Forest', dark: true, colors: { accent: '#34d399', text: '#dcefe6', heading: '#ffffff', muted: '#8fb3a3', bg: '#0e1a16', sidebarBg: '#14261f', sideText: '#dcefe6', sideAccent: '#6ee7b7', headerBg: '#0f3d2e', headerText: '#ffffff', line: '#25443a', chipBg: '#13241d', chipBorder: '#2d5244' } },
     { id: 'plum', name: 'Plum', dark: true, colors: { accent: '#c084fc', text: '#eadcf5', heading: '#ffffff', muted: '#b39cc9', bg: '#1a1024', sidebarBg: '#251536', sideText: '#eadcf5', sideAccent: '#d8b4fe', headerBg: '#3b1d5a', headerText: '#ffffff', line: '#3a2552', chipBg: '#221330', chipBorder: '#4a2f68' } },
@@ -195,7 +195,7 @@
   const ENUMS = {
     layout: ['single', 'side-right', 'side-left'], pageSize: ['A4', 'Letter'],
     fontHeading: FONT_NAMES, fontBody: FONT_NAMES,
-    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'],
+    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'],
     'pattern.corner': ['tr', 'tl', 'br', 'bl'],
     'pattern.area': ['header', 'page'],
     'header.style': ['left', 'center', 'banner'], 'header.in': ['top', 'main'], 'header.contactsIn': ['header', 'side'],
@@ -285,9 +285,9 @@
 
   /* ---------- templates ---------- */
   const TEMPLATES = [
-    { id: 'classic', name: 'Classic Duo', desc: 'Two columns, bold rules, skill chips.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'], patch: {} },
+    { id: 'classic', vibe: 'neutral', style: 'classic', name: 'Classic Duo', desc: 'Two columns, bold rules, skill chips.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'], patch: {} },
     {
-      id: 'modern', name: 'Modern Sidebar', desc: 'Filled sidebar with contact and skills.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education'],
+      id: 'modern', vibe: 'masculine', style: 'modern', name: 'Modern Sidebar', desc: 'Filled sidebar with contact and skills.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education'],
       patch: {
         layout: 'side-left', sidebarFilled: true, columnRatio: 67, fontHeading: 'Montserrat', fontBody: 'Open Sans', fontSize: 9.2,
         colors: { accent: '#1f6feb', heading: '#14213d', sidebarBg: '#1f2a44', sideText: '#ffffff', sideAccent: '#8ec5ff', chipBorder: '#c3cde0', line: '#d5dbe6' },
@@ -297,7 +297,7 @@
       },
     },
     {
-      id: 'executive', name: 'Executive Serif', desc: 'Single column, centered, refined serif.', side: [],
+      id: 'executive', vibe: 'neutral', style: 'classic', name: 'Executive Serif', desc: 'Single column, centered, refined serif.', side: [],
       patch: {
         layout: 'single', fontHeading: 'Playfair Display', fontBody: 'Lora', fontSize: 9.6, lineHeight: 1.42,
         colors: { accent: '#7b1e3a', heading: '#2a2a2a', muted: '#555555', line: '#bdbdbd' },
@@ -308,7 +308,7 @@
       },
     },
     {
-      id: 'banner', name: 'Bold Banner', desc: 'Color header banner with dot texture.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
+      id: 'banner', vibe: 'neutral', style: 'bold', name: 'Bold Banner', desc: 'Color header banner with dot texture.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
       patch: {
         layout: 'side-right', columnRatio: 64, fontHeading: 'Poppins', fontBody: 'Source Sans 3', fontSize: 9.6,
         colors: { accent: '#0f766e', headerBg: '#0f766e', headerText: '#ffffff', heading: '#0b3b38' },
@@ -318,7 +318,7 @@
       },
     },
     {
-      id: 'minimal', name: 'Minimal Plain', desc: 'Pure typography, ATS friendly.', side: [],
+      id: 'minimal', vibe: 'neutral', style: 'minimal', name: 'Minimal Plain', desc: 'Pure typography, ATS friendly.', side: [],
       patch: {
         layout: 'single', fontHeading: 'IBM Plex Sans', fontBody: 'IBM Plex Sans', fontSize: 9.4,
         colors: { accent: '#111111', heading: '#111111', muted: '#5a5a5a', line: '#d4d4d4' },
@@ -329,7 +329,7 @@
       },
     },
     {
-      id: 'compact', name: 'Compact Pro', desc: 'Dense two-column for long careers.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education'],
+      id: 'compact', vibe: 'neutral', style: 'modern', name: 'Compact Pro', desc: 'Dense two-column for long careers.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education'],
       patch: {
         layout: 'side-left', sidebarFilled: true, columnRatio: 70, columnGap: 6, fontHeading: 'Source Sans 3', fontBody: 'Source Sans 3', fontSize: 9, lineHeight: 1.3, sectionGap: 4.5,
         margins: { top: 10, right: 10, bottom: 10, left: 10 },
@@ -340,7 +340,7 @@
       },
     },
     {
-      id: 'creative', name: 'Creative Teal', desc: 'Deep teal sidebar with subtle texture.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
+      id: 'creative', vibe: 'neutral', style: 'creative', name: 'Creative Teal', desc: 'Deep teal sidebar with subtle texture.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
       patch: {
         layout: 'side-left', sidebarFilled: true, columnRatio: 66, fontHeading: 'Raleway', fontBody: 'Lato', fontSize: 9.5,
         colors: { accent: '#0d9488', heading: '#0f3d3e', sidebarBg: '#0f3d3e', sideText: '#e6fffb', sideAccent: '#5eead4', line: '#cfe3e1' },
@@ -350,7 +350,7 @@
       },
     },
     {
-      id: 'elegant', name: 'Elegant Rose', desc: 'Soft single column with a photo.', side: [],
+      id: 'elegant', vibe: 'feminine', style: 'elegant', name: 'Elegant Rose', desc: 'Soft single column with a photo.', side: [],
       patch: {
         layout: 'single', fontHeading: 'Playfair Display', fontBody: 'Nunito', fontSize: 9.6,
         colors: { accent: '#be185d', heading: '#4a044e', muted: '#6b5b6e', line: '#f0cfe0', chipBorder: '#f0b8d2', chipBg: '#fff5fa' },
@@ -370,7 +370,7 @@
       },
     },
     {
-      id: 'noir', name: 'Charcoal Gold', desc: 'Dark single page with a gold accent.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
+      id: 'noir', vibe: 'masculine', style: 'elegant', name: 'Charcoal Gold', desc: 'Dark single page with a gold accent.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests'],
       patch: {
         layout: 'side-right', columnRatio: 64, fontHeading: 'Playfair Display', fontBody: 'Lato', fontSize: 9.5,
         colors: THEME('charcoal'),
@@ -380,7 +380,7 @@
       },
     },
     {
-      id: 'circuit', name: 'Circuit Board', desc: 'Dark and monospaced with PCB traces.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education', 'additionalSkills'],
+      id: 'circuit', vibe: 'masculine', style: 'creative', name: 'Circuit Board', desc: 'Dark and monospaced with PCB traces.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education', 'additionalSkills'],
       patch: {
         layout: 'side-left', sidebarFilled: true, columnRatio: 68, fontHeading: 'IBM Plex Mono', fontBody: 'IBM Plex Sans', fontSize: 9.2,
         colors: Object.assign({}, THEME('forest'), { accent: '#22d3a0', sideAccent: '#22d3a0', bg: '#0b1511', sidebarBg: '#10201a' }),
@@ -390,7 +390,7 @@
       },
     },
     {
-      id: 'netops', name: 'Network Ops', desc: 'Clean two-column with a network-map header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      id: 'netops', vibe: 'masculine', style: 'modern', name: 'Network Ops', desc: 'Clean two-column with a network-map header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
       patch: {
         layout: 'side-right', columnRatio: 65, fontHeading: 'Manrope', fontBody: 'Inter', fontSize: 9.3,
         colors: { accent: '#0e7490', heading: '#0b2f3a', headerBg: '#0e7490', chipBorder: '#b9d6de' },
@@ -400,7 +400,7 @@
       },
     },
     {
-      id: 'academic', name: 'Academic CV', desc: 'Traditional single column serif.', side: [],
+      id: 'academic', vibe: 'neutral', style: 'classic', name: 'Academic CV', desc: 'Traditional single column serif.', side: [],
       patch: {
         layout: 'single', fontHeading: 'EB Garamond', fontBody: 'EB Garamond', fontSize: 10.4, lineHeight: 1.36,
         colors: { accent: '#1f3a5f', heading: '#111111', muted: '#555555', line: '#c9c9c9' },
@@ -410,7 +410,7 @@
       },
     },
     {
-      id: 'sunset', name: 'Sunset Bold', desc: 'Warm banner with boxed headings.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      id: 'sunset', vibe: 'neutral', style: 'bold', name: 'Sunset Bold', desc: 'Warm banner with boxed headings.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
       patch: {
         layout: 'side-right', columnRatio: 64, fontHeading: 'Poppins', fontBody: 'Nunito', fontSize: 9.6,
         colors: { accent: '#ea580c', headerBg: '#ea580c', headerText: '#ffffff', heading: '#431407', chipBorder: '#f6c9ad', chipBg: '#fff7f2' },
@@ -430,7 +430,7 @@
       },
     },
     {
-      id: 'forestdark', name: 'Forest Dark', desc: 'Dark single column with a serif touch.', side: [],
+      id: 'forestdark', vibe: 'masculine', style: 'classic', name: 'Forest Dark', desc: 'Dark single column with a serif touch.', side: [],
       patch: {
         layout: 'single', fontHeading: 'Lora', fontBody: 'Source Sans 3', fontSize: 9.8,
         colors: THEME('forest'),
@@ -440,7 +440,7 @@
       },
     },
     {
-      id: 'plumpro', name: 'Plum Pro', desc: 'Dark plum with a banner header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      id: 'plumpro', vibe: 'feminine', style: 'bold', name: 'Plum Pro', desc: 'Dark plum with a banner header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
       patch: {
         layout: 'side-right', columnRatio: 64, fontHeading: 'Raleway', fontBody: 'Lato', fontSize: 9.5,
         colors: THEME('plum'),
@@ -450,7 +450,7 @@
       },
     },
     {
-      id: 'ink', name: 'Ink & Paper', desc: 'Warm paper tones, centered and elegant.', side: [],
+      id: 'ink', vibe: 'neutral', style: 'elegant', name: 'Ink & Paper', desc: 'Warm paper tones, centered and elegant.', side: [],
       patch: {
         layout: 'single', fontHeading: 'Playfair Display', fontBody: 'Lora', fontSize: 9.7, lineHeight: 1.42,
         colors: THEME('paper'),
@@ -459,7 +459,144 @@
         heading: { style: 'short', case: 'upper', size: 10.5, weight: 700, spacing: 0.12 }, entries: { dividers: false, dateStyle: 'right' }, skills: { style: 'pipes' },
       },
     },
+    {
+      id: 'blush', vibe: 'feminine', style: 'elegant', name: 'Blush', desc: 'Soft rose with a botanical sprig.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Playfair Display', fontBody: 'Nunito', fontSize: 9.6,
+        colors: { accent: '#d1587f', heading: '#4a2a35', text: '#3b2b30', muted: '#7d6068', bg: '#fffafb', line: '#f2d3dc', chipBg: '#fff2f5', chipBorder: '#f0bfcd' },
+        pattern: { type: 'floral', area: 'page', color: '#d1587f', opacity: 0.2, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'circle', photoPos: 'left', photoSize: 28, nameCase: 'title', nameSize: 29 },
+        heading: { style: 'short', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: false, dateStyle: 'icons' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'lavender', vibe: 'feminine', style: 'modern', name: 'Lavender', desc: 'Soft violet sidebar with a gentle swirl.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-left', sidebarFilled: true, columnRatio: 67, fontHeading: 'Raleway', fontBody: 'Nunito', fontSize: 9.5,
+        colors: { accent: '#7c3aed', heading: '#2e1f5e', sidebarBg: '#efe9fb', sideText: '#3b2a63', sideAccent: '#7c3aed', line: '#ddd3f3', chipBorder: '#cbb9ee', chipBg: '#ffffff' },
+        pattern: { type: 'swirl', area: 'page', color: '#7c3aed', opacity: 0.16, scale: 1, corner: 'tr' },
+        header: { in: 'main', contactsIn: 'side', photoShape: 'circle', photoSize: 34, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'short', case: 'upper', size: 10.5, weight: 800 }, entries: { dividers: false, dateStyle: 'icons' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'rosegold', vibe: 'feminine', style: 'elegant', name: 'Rose Gold', desc: 'Dark and warm with delicate lace.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Playfair Display', fontBody: 'Lato', fontSize: 9.5,
+        colors: { accent: '#e8a0a8', heading: '#ffffff', text: '#f1e3e3', muted: '#bfa3a6', bg: '#1d1416', sidebarBg: '#291b1e', sideText: '#f1e3e3', sideAccent: '#e8a0a8', headerBg: '#3a2327', headerText: '#ffffff', line: '#43292e', chipBg: '#251a1d', chipBorder: '#5a3a40' },
+        pattern: { type: 'lace', area: 'page', color: '#e8a0a8', opacity: 0.22, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'circle', photoSize: 28, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.12 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'botanical', vibe: 'feminine', style: 'classic', name: 'Botanical', desc: 'Fresh greens with scattered blossoms.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Lora', fontBody: 'Source Sans 3', fontSize: 9.8,
+        colors: { accent: '#3f7d5a', heading: '#1f3d2e', text: '#26332b', muted: '#62756a', bg: '#fbfdf9', line: '#d5e5d9', chipBg: '#f1f8f3', chipBorder: '#bcd7c4' },
+        pattern: { type: 'blossoms', area: 'page', color: '#3f7d5a', opacity: 0.18, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'rounded', photoSize: 28, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: false, dateStyle: 'right' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'peony', vibe: 'feminine', style: 'bold', name: 'Peony', desc: 'Rose banner with a watercolor wash.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Poppins', fontBody: 'Nunito', fontSize: 9.5,
+        colors: { accent: '#be185d', headerBg: '#be185d', headerText: '#ffffff', heading: '#4a0d2a', bg: '#fffcfd', chipBorder: '#f4bcd2', chipBg: '#fff2f7', line: '#f6d3e1' },
+        pattern: { type: 'wash', area: 'page', color: '#be185d', opacity: 0.12, scale: 1, corner: 'tr' },
+        header: { style: 'banner', photoShape: 'circle', photoSize: 30, nameCase: 'upper', nameSize: 25 },
+        heading: { style: 'bar', case: 'upper', size: 10, weight: 800 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'blueprint', vibe: 'masculine', style: 'modern', name: 'Blueprint', desc: 'Navy sidebar with a drafting-table accent.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills', 'education'],
+      patch: {
+        layout: 'side-left', sidebarFilled: true, columnRatio: 68, fontHeading: 'IBM Plex Sans', fontBody: 'IBM Plex Sans', fontSize: 9.3,
+        colors: { accent: '#1e4e8c', heading: '#0b2447', sidebarBg: '#0b2447', sideText: '#e7eefb', sideAccent: '#7db2ff', line: '#d4dcea', chipBorder: '#b8c6dd' },
+        pattern: { type: 'blueprint', area: 'page', color: '#1e4e8c', opacity: 0.2, scale: 1, corner: 'tr' },
+        header: { in: 'main', contactsIn: 'side', photoShape: 'square', photoSize: 32, nameCase: 'upper', nameSize: 24 },
+        heading: { style: 'underline', case: 'upper', size: 10, weight: 700 }, entries: { dividers: false, dateStyle: 'plain', bulletStyle: 'square' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'steel', vibe: 'masculine', style: 'minimal', name: 'Steel', desc: 'Cool gray, single column, hex accent.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Space Grotesk', fontBody: 'Inter', fontSize: 9.4,
+        colors: { accent: '#475569', heading: '#0f172a', muted: '#64748b', line: '#cbd5e1', chipBorder: '#cbd5e1', chipBg: '#f8fafc', bg: '#ffffff' },
+        pattern: { type: 'hex', area: 'page', color: '#475569', opacity: 0.16, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'square', photoSize: 26, nameCase: 'upper', nameSize: 25, titleColor: 'muted' },
+        heading: { style: 'bar', case: 'upper', size: 10, weight: 700 }, entries: { dividers: false, dateStyle: 'right', bulletStyle: 'square' }, skills: { style: 'chips' }, contactIcons: false,
+      },
+    },
+    {
+      id: 'ember', vibe: 'masculine', style: 'bold', name: 'Ember', desc: 'Black with an orange chevron accent.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 65, fontHeading: 'Space Grotesk', fontBody: 'Inter', fontSize: 9.4,
+        colors: { accent: '#f97316', heading: '#ffffff', text: '#e8e8e8', muted: '#a3a3a3', bg: '#121212', sidebarBg: '#1b1b1b', sideText: '#e8e8e8', sideAccent: '#fb923c', headerBg: '#1b1b1b', headerText: '#ffffff', line: '#2e2e2e', chipBg: '#1b1b1b', chipBorder: '#3d3d3d' },
+        pattern: { type: 'chevrons', area: 'page', color: '#f97316', opacity: 0.26, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'square', photoSize: 28, nameCase: 'upper', nameSize: 26 },
+        heading: { style: 'underline', case: 'upper', size: 10.5, weight: 800 }, entries: { dividers: true, dateStyle: 'plain', bulletStyle: 'arrow' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'ranger', vibe: 'masculine', style: 'classic', name: 'Ranger', desc: 'Deep green with mountain ridgelines.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Merriweather', fontBody: 'Source Sans 3', fontSize: 9.7,
+        colors: { accent: '#a3b18a', heading: '#ffffff', text: '#e4ebdf', muted: '#9fb09a', bg: '#101a14', sidebarBg: '#16241b', sideText: '#e4ebdf', sideAccent: '#a3b18a', headerBg: '#1b2e22', headerText: '#ffffff', line: '#26382c', chipBg: '#16241b', chipBorder: '#35503f' },
+        pattern: { type: 'ridge', area: 'page', color: '#a3b18a', opacity: 0.3, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'rounded', photoSize: 28, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: false, dateStyle: 'right', bulletStyle: 'dash' }, skills: { style: 'pipes' },
+      },
+    },
+    {
+      id: 'carbon', vibe: 'masculine', style: 'minimal', name: 'Carbon', desc: 'Monochrome dark, dense and quiet.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills', 'education'],
+      patch: {
+        layout: 'side-left', sidebarFilled: true, columnRatio: 70, columnGap: 6, fontHeading: 'Inter', fontBody: 'Inter', fontSize: 9, lineHeight: 1.3, sectionGap: 4.5,
+        margins: { top: 10, right: 10, bottom: 10, left: 10 },
+        colors: { accent: '#e5e5e5', heading: '#ffffff', text: '#d4d4d4', muted: '#8a8a8a', bg: '#0a0a0a', sidebarBg: '#171717', sideText: '#d4d4d4', sideAccent: '#ffffff', line: '#2a2a2a', chipBg: '#171717', chipBorder: '#3a3a3a' },
+        pattern: { type: 'compass', area: 'page', color: '#ffffff', opacity: 0.1, scale: 1, corner: 'tr' },
+        header: { in: 'main', contactsIn: 'side', photoShape: 'square', photoSize: 30, nameCase: 'upper', nameSize: 22 },
+        heading: { style: 'plain', case: 'upper', size: 9.6, weight: 700, spacing: 0.14 }, entries: { dividers: false, dateStyle: 'plain', bulletStyle: 'dash' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'mint', vibe: 'neutral', style: 'creative', name: 'Soft Mint', desc: 'Airy teal pastel with a gentle wash.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'DM Sans', fontBody: 'DM Sans', fontSize: 9.5,
+        colors: { accent: '#0d9488', heading: '#0b3d3a', bg: '#f7fcfb', line: '#cfe8e4', chipBg: '#ffffff', chipBorder: '#b5dcd6', headerBg: '#0d9488' },
+        pattern: { type: 'wash', area: 'page', color: '#14b8a6', opacity: 0.14, scale: 1, corner: 'tr' },
+        header: { style: 'left', photoShape: 'rounded', photoSize: 28, nameCase: 'title', nameSize: 27 },
+        heading: { style: 'short', case: 'upper', size: 10.5, weight: 700 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'outline' },
+      },
+    },
   ];
+
+
+  /* ---------- template categories (tone and colour family are derived from the design itself) ---------- */
+  function hueFamily(hex) {
+    const h6 = hex6(hex), r = parseInt(h6.substr(0, 2), 16) / 255, g = parseInt(h6.substr(2, 2), 16) / 255, b = parseInt(h6.substr(4, 2), 16) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    if (d < 0.08 || l > 0.93 || l < 0.07) return 'mono';
+    const sat = d / (1 - Math.abs(2 * l - 1));
+    if (sat < 0.16) return 'mono';
+    let hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    hh = (hh * 60 + 360) % 360;
+    if (hh < 15 || hh >= 345) return 'red'; if (hh < 45) return 'orange'; if (hh < 68) return 'gold'; if (hh < 165) return 'green';
+    if (hh < 200) return 'teal'; if (hh < 262) return 'blue'; if (hh < 298) return 'purple'; return 'pink';
+  }
+  const COLOR_FAMILIES = { blue: '#2b6cb0', teal: '#0d9488', green: '#3f7d5a', red: '#c0392b', pink: '#d1587f', purple: '#7c3aed', orange: '#ea580c', gold: '#b7791f', mono: '#475569' };
+  const TEMPLATE_FACETS = {
+    tone: [['light', 'Light'], ['dark', 'Dark']],
+    vibe: [['masculine', 'Masculine'], ['feminine', 'Feminine'], ['neutral', 'Neutral']],
+    style: [['classic', 'Classic'], ['modern', 'Modern'], ['minimal', 'Minimal'], ['bold', 'Bold'], ['elegant', 'Elegant'], ['creative', 'Creative']],
+    color: Object.keys(COLOR_FAMILIES).map((k) => [k, k[0].toUpperCase() + k.slice(1)]),
+  };
+  function templateInfo(t) {
+    const st = deepMerge(defaultSettings(), t.patch);
+    return { tone: luminance(st.colors.bg) < 0.25 ? 'dark' : 'light', vibe: t.vibe || 'neutral', style: t.style || 'classic', color: hueFamily(st.colors.accent) };
+  }
+  TEMPLATES.forEach((t) => { t.info = templateInfo(t); });
 
   function applyTemplate(doc, id) {
     const t = TEMPLATES.find((x) => x.id === id) || TEMPLATES[0];
@@ -567,8 +704,10 @@
 
   return {
     FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
+    TEMPLATE_FACETS, COLOR_FAMILIES, templateInfo,
     setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
-    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'],
+    ACCENT_GROUPS: [['Soft & floral', ['floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
+    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'],
     deepMerge, clone, uid, mix, luminance,
   };
 });

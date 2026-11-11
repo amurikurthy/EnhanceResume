@@ -136,7 +136,7 @@
 
 
   /* ---------- subtle corner accents: one piece of fine line art per page (not a tiled texture) ---------- */
-  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'];
+  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge'];
   function accentArt(type, col, op) { // drawn on a 210x297 page, anchored top-right
     const st = (w) => `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${op}"`;
     const ring = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" ${st(0.35)}/>`;
@@ -168,6 +168,79 @@
       for (let i = 0; i < 26; i++) {
         const o = Math.max(0.1, 1 - i / 26), c = 14 + i * 5.2;
         b += `<path d="M${210 - c} 0L210 ${c}" fill="none" stroke="${col}" stroke-width="0.3" stroke-opacity="${(op * o).toFixed(3)}"/>`;
+      }
+
+    } else if (type === 'floral') {
+      const leaf = (x, y, ang, len) => `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(0)})"><path d="M0 0Q${len / 2} ${-len * 0.38} ${len} 0Q${len / 2} ${len * 0.38} 0 0Z" ${st(0.3)}/><path d="M0 0L${len * 0.85} 0" ${st(0.2)}/></g>`;
+      const bez = (p0, p1, p2, t) => [(1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
+      const sprig = (p0, p1, p2, n, len) => {
+        b += `<path d="M${p0[0]} ${p0[1]}Q${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]}" ${st(0.35)}/>`;
+        for (let i = 1; i <= n; i++) {
+          const t = i / (n + 1), [x, y] = bez(p0, p1, p2, t), [x2, y2] = bez(p0, p1, p2, t + 0.02), a = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI;
+          b += leaf(x, y, a + (i % 2 ? 55 : -55), len * (1 - t * 0.35));
+        }
+        b += leaf(p2[0], p2[1], Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI, len * 0.7);
+      };
+      sprig([210, 4], [150, 6], [128, 70], 6, 13); sprig([210, 44], [182, 50], [170, 104], 4, 10); sprig([176, 0], [166, 10], [160, 34], 3, 8);
+      const flower = (cx, cy, r) => { for (let k = 0; k < 5; k++) b += `<ellipse cx="${cx}" cy="${cy - r * 0.9}" rx="${r * 0.5}" ry="${r}" transform="rotate(${k * 72} ${cx} ${cy})" ${st(0.3)}/>`; b += dot(cx, cy, 0.9); };
+      flower(150, 26, 5); flower(185, 76, 4);
+    } else if (type === 'blossoms') {
+      const flower = (cx, cy, r, n) => { for (let k = 0; k < n; k++) b += `<ellipse cx="${cx}" cy="${cy - r * 0.9}" rx="${(r * 0.52).toFixed(1)}" ry="${r}" transform="rotate(${(k * 360) / n} ${cx} ${cy})" ${st(0.3)}/>`; b += ring(cx, cy, r * 0.22); };
+      [[188, 22, 11, 5], [160, 52, 7, 5], [196, 66, 6, 6], [132, 26, 5, 5], [172, 96, 5, 5], [206, 98, 4, 5], [144, 78, 4, 6]].forEach(([x, y, r, n]) => flower(x, y, r, n));
+      [[120, 50], [150, 8], [180, 44], [206, 44], [128, 90], [160, 76]].forEach(([x, y]) => { b += dot(x, y, 0.9, 0.9); });
+    } else if (type === 'swirl') {
+      b += `<path d="M210 18C186 18 168 34 172 54S204 78 198 56C194 42 178 46 182 58" ${st(0.4)}/>`;
+      b += `<path d="M210 34C196 34 186 44 189 56" ${st(0.3)}/>`;
+      b += `<path d="M210 52C170 54 140 30 118 40S96 76 124 78C142 79 144 62 132 60" ${st(0.4)}/>`;
+      b += `<path d="M150 0C150 22 168 26 176 14S164 0 160 14" ${st(0.35)}/>`;
+      b += `<path d="M210 96C184 96 158 108 156 130S178 150 184 134" ${st(0.35)}/>`;
+      [[182, 58], [132, 60], [160, 14], [184, 134]].forEach(([x, y]) => { b += dot(x, y, 1.3); });
+      [[172, 54], [118, 40], [156, 130]].forEach(([x, y]) => { b += ring(x, y, 1.8); });
+    } else if (type === 'scallop') {
+      for (let row = 0; row < 11; row++) for (let i = 0; i < 12; i++) {
+        const r = 6, x = 210 - i * 12 + (row % 2 ? 6 : 0), y = row * 5.5, d = Math.hypot(210 - x, y) / 120, o = Math.max(0, 1 - d);
+        if (o > 0.05) b += `<path d="M${x - r} ${y}a${r} ${r} 0 0 0 ${2 * r} 0" fill="none" stroke="${col}" stroke-width="0.3" stroke-opacity="${(op * Math.pow(o, 1.2)).toFixed(3)}"/>`;
+      }
+    } else if (type === 'wash') {
+      b += `<defs><radialGradient id="w"><stop offset="0" stop-color="${col}" stop-opacity="${(op * 1.7).toFixed(3)}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient></defs>`;
+      [[200, 6, 62], [160, 40, 38], [214, 70, 40], [130, 14, 30], [178, 96, 22]].forEach(([x, y, r]) => { b += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#w)"/>`; });
+    } else if (type === 'lace') {
+      [18, 28, 38, 50, 62, 76, 92].forEach((rad, i) => { b += `<circle cx="210" cy="0" r="${rad}" fill="none" stroke="${col}" stroke-width="${i % 2 ? 0.5 : 0.7}" stroke-linecap="round" stroke-dasharray="0.01 ${i % 2 ? 2.6 : 3.4}" stroke-opacity="${op}"/>`; });
+      [24, 44, 69].forEach((rad) => { for (let k = 0; k < 14; k++) { const a = (Math.PI / 2) * (k / 13); b += `<circle cx="${(210 - rad * Math.cos(a)).toFixed(1)}" cy="${(rad * Math.sin(a)).toFixed(1)}" r="1.1" ${st(0.25)}/>`; } });
+    } else if (type === 'blueprint') {
+      for (let i = 0; i <= 10; i++) { const o = (0.25 + 0.75 * (1 - i / 10)).toFixed(2); b += `<path d="M${110 + i * 10} 0V110" fill="none" stroke="${col}" stroke-width="0.2" stroke-opacity="${(op * o).toFixed(3)}"/>`; b += `<path d="M110 ${i * 11}H210" fill="none" stroke="${col}" stroke-width="0.2" stroke-opacity="${(op * o).toFixed(3)}"/>`; }
+      b += `<circle cx="172" cy="48" r="20" ${st(0.4)}/><circle cx="172" cy="48" r="12" ${st(0.25)}/><path d="M146 48H198M172 22V74" ${st(0.25)}/>`;
+      b += `<path d="M120 84H196M120 80V88M196 80V88" ${st(0.3)}/><path d="M122 84l4-2v4zM194 84l-4-2v4z" fill="${col}" fill-opacity="${op}"/>`;
+      b += `<path d="M140 18A26 26 0 0 1 166 44" ${st(0.3)}/><path d="M205 12L205 104" stroke-dasharray="2 2" ${st(0.25)}/>`;
+    } else if (type === 'hex') {
+      const R = 9, hh = R * Math.sqrt(3);
+      for (let c = 0; c < 9; c++) for (let r = 0; r < 8; r++) {
+        const cx = 214 - c * R * 1.5, cy = 2 + r * hh + (c % 2 ? hh / 2 : 0), d = Math.hypot(214 - cx, cy) / 120, o = Math.max(0, 1 - d);
+        if (o < 0.06) continue;
+        const pts = Array.from({ length: 6 }, (_, k) => `${(cx + R * 0.92 * Math.cos(k * Math.PI / 3)).toFixed(1)} ${(cy + R * 0.92 * Math.sin(k * Math.PI / 3)).toFixed(1)}`).join('L');
+        b += `<path d="M${pts}Z" fill="none" stroke="${col}" stroke-width="0.3" stroke-linejoin="round" stroke-opacity="${(op * Math.pow(o, 0.9)).toFixed(3)}"/>`;
+      }
+    } else if (type === 'chevrons') {
+      for (let col2 = 0; col2 < 5; col2++) for (let i = 0; i < 9; i++) {
+        const x = 200 - col2 * 14, y = 6 + i * 12, o = Math.max(0.05, 1 - (col2 * 0.2 + i * 0.07));
+        b += `<path d="M${x} ${y}l-9 6 9 6" fill="none" stroke="${col}" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${(op * o).toFixed(3)}"/>`;
+      }
+    } else if (type === 'angular') {
+      let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const pts = []; for (let i = 0; i < 7; i++) { pts.push([]); for (let j = 0; j < 6; j++) pts[i].push([212 - i * 17 + (rnd() - 0.5) * 9, j * 19 + (rnd() - 0.5) * 9]); }
+      const line = (a, c2) => { const d = Math.hypot(210 - (a[0] + c2[0]) / 2, (a[1] + c2[1]) / 2) / 125, o = Math.max(0, 1 - d); if (o > 0.04) b += `<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${c2[0].toFixed(1)} ${c2[1].toFixed(1)}" fill="none" stroke="${col}" stroke-width="0.3" stroke-opacity="${(op * Math.pow(o, 1.1)).toFixed(3)}"/>`; };
+      for (let i = 0; i < 7; i++) for (let j = 0; j < 6; j++) { if (i < 6) line(pts[i][j], pts[i + 1][j]); if (j < 5) line(pts[i][j], pts[i][j + 1]); if (i < 6 && j < 5) line(pts[i][j], pts[i + 1][j + 1]); }
+      for (let i = 0; i < 7; i += 2) for (let j = 0; j < 6; j += 2) { const d = Math.hypot(210 - pts[i][j][0], pts[i][j][1]) / 125; if (d < 0.9) b += dot(pts[i][j][0].toFixed(1), pts[i][j][1].toFixed(1), 0.9, Math.max(0.2, 1 - d)); }
+    } else if (type === 'compass') {
+      [14, 26, 38, 52, 68].forEach((rad, i) => { b += `<circle cx="188" cy="30" r="${rad}" ${st(i === 4 ? 0.45 : 0.3)}/>`; });
+      for (let k = 0; k < 72; k++) { const a = (k * 5 * Math.PI) / 180, long = k % 6 === 0, r1 = 68, r2 = long ? 60 : 64; b += `<path d="M${(188 + r1 * Math.cos(a)).toFixed(1)} ${(30 + r1 * Math.sin(a)).toFixed(1)}L${(188 + r2 * Math.cos(a)).toFixed(1)} ${(30 + r2 * Math.sin(a)).toFixed(1)}" ${st(long ? 0.4 : 0.25)}/>`; }
+      b += `<path d="M188 -42V102M116 30H260" ${st(0.3)}/><path d="M188 12l5 18-5 18-5-18z" ${st(0.35)}/>`;
+    } else if (type === 'ridge') {
+      let seed = 11; const rnd = () => { seed = (seed * 48271) % 2147483647; return seed / 2147483647; };
+      for (let layer = 0; layer < 6; layer++) {
+        let d = `M${100} ${20 + layer * 15}`; let y = 20 + layer * 15;
+        for (let x = 110; x <= 214; x += 8) { y = 20 + layer * 15 + (rnd() - 0.5) * (10 + layer * 2) - (x - 110) * 0.05 * (layer % 2 ? 1 : -1); d += `L${x} ${y.toFixed(1)}`; }
+        b += `<path d="${d}" fill="none" stroke="${col}" stroke-width="0.35" stroke-linejoin="round" stroke-opacity="${(op * (1 - layer * 0.14)).toFixed(3)}"/>`;
       }
     }
     return b;
