@@ -23,7 +23,7 @@ services:
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:
-      - er-data:/data             # SQLite database persists here
+      - ../data:/data             # SQLite database persists here (host folder next to the repo)
     shm_size: "512mb"             # Chromium needs shared memory for PDF rendering
     # ports:
     #   - "3000:3000"             # uncomment to reach it directly (use COOKIE_SECURE: "false" over plain http)
@@ -38,9 +38,6 @@ services:
       - NEWT_SECRET=
     extra_hosts:
       - "docker-host:host-gateway"
-
-volumes:
-  er-data:
 
 networks:
   default:

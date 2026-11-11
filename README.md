@@ -22,7 +22,7 @@ docker compose up -d
 
 The image `ghcr.io/amurikurthy/enhanceresume:latest` is built and published by GitHub Actions on every push to `main`. To build locally instead: `docker compose up -d --build`.
 
-Common commands: `docker compose logs -f` (logs), `docker compose down` (stop; data is kept), `docker compose down -v` (stop and **delete all data**), `docker compose pull && docker compose up -d` (update).
+Common commands: `docker compose logs -f` (logs), `docker compose down` (stop; data is kept), `rm -rf ../data` after `docker compose down` (**deletes all data**), `docker compose pull && docker compose up -d` (update).
 
 ### docker-compose.yml
 
@@ -54,7 +54,7 @@ services:
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:
-      - er-data:/data             # SQLite database persists here
+      - ../data:/data             # SQLite database persists here (host folder next to the repo)
     shm_size: "512mb"             # Chromium needs shared memory for PDF rendering
     # ports:
     #   - "3000:3000"             # uncomment to reach it directly (use COOKIE_SECURE: "false" over plain http)
@@ -70,15 +70,12 @@ services:
     extra_hosts:
       - "docker-host:host-gateway"
 
-volumes:
-  er-data:
-
 networks:
   default:
     name: enhanceresume
 ```
 
-Create the site in Pangolin to get `NEWT_ID` and `NEWT_SECRET`. Data (SQLite) lives in the `er-data` volume at `/data`.
+Create the site in Pangolin to get `NEWT_ID` and `NEWT_SECRET`. Data (SQLite database and session key) is stored in `../data` on the host (a `data` folder next to the repo folder), mounted at `/data`. The container runs as uid 1000, so create it first: `mkdir -p ../data && sudo chown 1000:1000 ../data`. Back up by copying that folder.
 
 | Env var | Default | Purpose |
 |---|---|---|
