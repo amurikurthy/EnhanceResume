@@ -24,18 +24,20 @@ export function templateBrowser({ sampleFor, getCurrent, onPick, width = 150 }) 
     }
     return cache.get(t.id);
   }
+  /* compact toolbar: three dropdowns + a row of colour dots (instead of rows of text chips) */
   function drawFilters() {
-    filters.replaceChildren(...Object.keys(LABELS).map((facet) => {
+    const select = (facet, any) => {
       const have = present(facet);
-      const chips = T.TEMPLATE_FACETS[facet].filter(([v]) => have.has(v)).map(([v, label]) => {
-        const on = active[facet] === v;
-        const style = facet === 'color' ? { '--dot': T.COLOR_FAMILIES[v] } : null;
-        return h('button', { type: 'button', class: 'chip' + (on ? ' on' : '') + (facet === 'color' ? ' dotted' : ''), style, title: label,
-          onclick: () => { active[facet] = on ? null : v; drawFilters(); drawGrid(); } }, facet === 'color' ? [h('span', { class: 'dot' }), label] : label);
-      });
-      return h('div', { class: 'tb-row' }, h('span', { class: 'tb-lbl' }, LABELS[facet]),
-        h('button', { type: 'button', class: 'chip' + (!active[facet] ? ' on' : ''), onclick: () => { active[facet] = null; drawFilters(); drawGrid(); } }, 'All'), chips);
-    }));
+      const el = h('select', { class: 'tb-sel' + (active[facet] ? ' on' : ''), 'aria-label': LABELS[facet] },
+        h('option', { value: '' }, any), T.TEMPLATE_FACETS[facet].filter(([v]) => have.has(v)).map(([v, l]) => h('option', { value: v, selected: active[facet] === v }, l)));
+      el.addEventListener('change', () => { active[facet] = el.value || null; drawFilters(); drawGrid(); });
+      return el;
+    };
+    const have = present('color');
+    const dots = h('div', { class: 'tb-dots', role: 'group', 'aria-label': 'Color' }, Object.keys(T.COLOR_FAMILIES).filter((k) => have.has(k)).map((k) =>
+      h('button', { type: 'button', class: 'tb-dot' + (active.color === k ? ' on' : ''), title: k[0].toUpperCase() + k.slice(1), 'aria-label': k, 'aria-pressed': active.color === k ? 'true' : 'false',
+        style: { background: T.COLOR_FAMILIES[k] }, onclick: () => { active.color = active.color === k ? null : k; drawFilters(); drawGrid(); } })));
+    filters.replaceChildren(h('div', { class: 'tb-selects' }, select('tone', 'Any tone'), select('vibe', 'Any vibe'), select('style', 'Any look')), h('div', { class: 'tb-colors' }, h('span', { class: 'tb-lbl' }, 'Color'), dots));
   }
   function drawGrid() {
     const list = T.TEMPLATES.filter(matches);

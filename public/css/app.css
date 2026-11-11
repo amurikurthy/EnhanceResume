@@ -340,3 +340,13 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .check .rst { margin-left: 2px; }
 .grp > summary { align-items: center; } .grp > summary .rst { margin-left: auto; margin-right: 8px; width: 24px; height: 24px; color: var(--muted); } .grp > summary .rst svg { width: 15px; height: 15px; }
 .reset-all { align-self: flex-start; gap: 6px; color: var(--brand); border-color: var(--brand-ring); background: var(--brand-soft); } .reset-all svg { width: 14px; height: 14px; }
+
+/* compact template filters (replaces the chip rows) */
+.tb-filters { padding: 0; background: none; border: 0; gap: 8px; }
+.tb-selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tb-sel { width: 100%; padding: 6px 8px; font-size: 13px; font-weight: 600; border-radius: 8px; } .tb-sel.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+.tb-colors { display: flex; align-items: center; gap: 10px; } .tb-colors .tb-lbl { width: auto; }
+.tb-dots { display: flex; gap: 7px; flex-wrap: wrap; }
+.tb-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; transition: transform .1s, box-shadow .1s; }
+.tb-dot:hover { transform: scale(1.15); } .tb-dot.on { box-shadow: 0 0 0 2px var(--brand); transform: scale(1.12); }
+.panel .tb-selects { grid-template-columns: 1fr 1fr 1fr; }
