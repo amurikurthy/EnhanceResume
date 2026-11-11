@@ -1517,8 +1517,17 @@ export async function mountEditor(root, id) {
     if (lastFollow && tab === 'content' && content.contains(document.activeElement)) { followKey = ''; followTo(lastFollow, { scroll: false }); }
   }
 
-  const titleIn = h('input', { class: 'doc-title', type: 'text', value: title, maxlength: 100, 'aria-label': 'Resume name' });
-  titleIn.addEventListener('input', () => { title = titleIn.value || 'Untitled resume'; touch(); });
+  /* The name sizes itself to its text (up to a limit), shows an ellipsis + tooltip when it does not fit, and
+   * expands over the neighbouring toolbar items while you are editing so the whole name is visible. */
+  const titleIn = h('input', { class: 'doc-title', type: 'text', value: title, maxlength: 100, 'aria-label': 'Resume name', title, spellcheck: 'false' });
+  const titleSizer = h('span', { class: 'title-sizer', 'aria-hidden': 'true' }, title);
+  const titleWrap = h('div', { class: 'title-wrap' }, titleSizer, titleIn);
+  const syncTitle = () => { titleSizer.textContent = (titleIn.value || 'Untitled resume') + '\u00a0'; titleIn.title = titleIn.value; };
+  titleIn.addEventListener('input', () => { title = titleIn.value || 'Untitled resume'; syncTitle(); touch(); });
+  titleIn.addEventListener('focus', () => { titleWrap.classList.add('editing'); requestAnimationFrame(() => titleIn.select()); });
+  titleIn.addEventListener('blur', () => { titleWrap.classList.remove('editing'); titleIn.scrollLeft = 0; });
+  titleIn.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === 'Escape') titleIn.blur(); });
+  syncTitle();
   const pdfBtn = h('button', { class: 'btn primary', onclick: async () => {
     pdfBtn.disabled = true; pdfBtn.textContent = 'Generating…';
     try {
@@ -1532,7 +1541,7 @@ export async function mountEditor(root, id) {
 
   const bar = topbar(null);
   bar.querySelector('.spacer').before(
-    h('a', { class: 'btn ghost', href: '#/' }, '← My resumes'), titleIn, statusEl);
+    h('a', { class: 'btn ghost', href: '#/' }, '← My resumes'), titleWrap, statusEl);
   undoBtn = h('button', { class: 'icon-btn', title: 'Undo (Ctrl+Z)', 'aria-label': 'Undo', onclick: undo, html: SVG(ICO.undo) });
   redoBtn = h('button', { class: 'icon-btn', title: 'Redo (Ctrl+Shift+Z)', 'aria-label': 'Redo', onclick: redo, html: SVG(ICO.redo) });
   syncUndo();

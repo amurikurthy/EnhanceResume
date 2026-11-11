@@ -195,7 +195,7 @@
   const ENUMS = {
     layout: ['single', 'side-right', 'side-left'], pageSize: ['A4', 'Letter'],
     fontHeading: FONT_NAMES, fontBody: FONT_NAMES,
-    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
+    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna', 'netcircuit'],
     'pattern.corner': ['tr', 'tl', 'br', 'bl'],
     'pattern.area': ['header', 'page'],
     'header.style': ['left', 'center', 'banner'], 'header.in': ['top', 'main'], 'header.contactsIn': ['header', 'side'],
@@ -751,8 +751,8 @@
     FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
     TEMPLATE_FACETS, COLOR_FAMILIES, templateInfo,
     setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
-    ACCENT_GROUPS: [['Soft & floral', ['henna', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
-    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
+    ACCENT_GROUPS: [['Soft & floral', ['henna', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'netcircuit', 'contour', 'nodemap', 'dotfade', 'linefade']]],
+    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna', 'netcircuit'],
     applyTemplateParts, mixTemplates, deepMerge, clone, uid, mix, luminance,
   };
 });

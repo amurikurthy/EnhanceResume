@@ -135,8 +135,34 @@
   const ia = (id) => (EDIT ? ` data-iid="${esc(id)}"` : '');
 
 
+
+  /* Circuit-style line art is defined as plain polylines (mm on a 210x297 page, or tile units) so a test can prove no two
+   * traces ever cross. Traces are nested (an upper trace turns down further left than the one below it), never stacked. */
+  const GEOMETRY = {
+    traces: [
+      ...[0, 1, 2, 3].map((i) => { const y = 12 + 8 * i, tx = 130 + 16 * i; return { pts: [[210, y], [tx + 8, y], [tx, y + 8], [tx, 62 + 12 * i]], end: 'ring' }; }),
+      { pts: [[96, 0], [96, 22], [86, 32], [86, 58]], end: 'ring' },
+      { pts: [[108, 0], [108, 16], [118, 26], [118, 50]], end: 'ring' },
+      { pts: [[210, 124], [196, 124], [186, 134], [186, 154]], end: 'ring' },
+    ],
+    circuitTile: { size: 60, lines: [
+      { pts: [[0, 12], [18, 12], [26, 20], [26, 40], [34, 48], [34, 60]] }, { pts: [[34, 0], [34, 4], [42, 12], [60, 12]] },
+      { pts: [[38, 30], [50, 30], [56, 36], [56, 52]], start: 'ring', end: 'ring' }, { pts: [[4, 28], [10, 28], [14, 32], [14, 50]], start: 'ring', end: 'ring' },
+    ] },
+    netcircuit: {
+      edges: [
+        { pts: [[188, 26], [160, 26], [150, 36], [150, 52]] }, { pts: [[188, 26], [188, 52], [198, 62], [198, 84]] },
+        { pts: [[150, 52], [150, 70], [140, 80], [116, 80]] }, { pts: [[188, 26], [188, 10], [176, 0]] },
+        { pts: [[150, 52], [128, 52], [118, 42], [118, 22], [108, 12], [96, 12]] }, { pts: [[116, 80], [116, 100]] },
+        { pts: [[198, 84], [198, 104], [188, 114], [160, 114]] },
+      ],
+      nodes: [[188, 26, 4], [150, 52, 2.8], [198, 84, 2.8], [116, 80, 2.6], [96, 12, 2.4], [116, 100, 2.4], [160, 114, 2.4]],
+    },
+  };
+  const polyD = (pts) => 'M' + pts.map((q) => q[0] + ' ' + q[1]).join('L');
+
   /* ---------- subtle corner accents: one piece of fine line art per page (not a tiled texture) ---------- */
-  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'];
+  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna', 'netcircuit'];
   function accentArt(type, col, op) { // drawn on a 210x297 page, anchored top-right
     const st = (w) => `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${op}"`;
     const ring = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" ${st(0.35)}/>`;
@@ -147,10 +173,15 @@
       [[210 - 46 * Math.cos(0.5), 46 * Math.sin(0.5)], [210 - 80 * Math.cos(1.0), 80 * Math.sin(1.0)], [210 - 100 * Math.cos(0.25), 100 * Math.sin(0.25)], [210 - 62 * Math.cos(1.2), 62 * Math.sin(1.2)]].forEach(([x, y]) => { b += ring(x.toFixed(1), y.toFixed(1), 1.6); });
       b += `<circle cx="168" cy="44" r="12" ${st(0.3)}/><circle cx="168" cy="44" r="22" ${st(0.3)}/>`;
     } else if (type === 'traces') {
-      const paths = ['M210 14H180L166 28V60L174 68H198', 'M210 24H184L172 36V78L182 88', 'M210 34H192L180 46V98L188 106H210', 'M150 0V18L140 28V68L148 76', 'M122 0V10L112 20H98', 'M210 122H198L188 132V152', 'M160 0V8L156 12'];
-      paths.forEach((d) => { b += `<path d="${d}" ${st(0.4)}/>`; });
-      [[198, 68], [182, 88], [148, 76], [98, 20], [188, 152], [210, 106]].forEach(([x, y]) => { b += ring(x, y, 1.9); });
-      [[166, 28], [180, 46], [140, 28], [188, 132]].forEach(([x, y]) => { b += dot(x, y, 0.9); });
+      GEOMETRY.traces.forEach((t) => {
+        b += `<path d="${polyD(t.pts)}" ${st(0.4)}/>`;
+        const e = t.pts[t.pts.length - 1]; b += ring(e[0], e[1], 1.9);
+        const c = t.pts[1]; b += dot(c[0], c[1], 0.8);
+      });
+    } else if (type === 'netcircuit') {
+      GEOMETRY.netcircuit.edges.forEach((e) => { b += `<path d="${polyD(e.pts)}" ${st(0.4)}/>`; });
+      GEOMETRY.netcircuit.nodes.forEach(([x, y, r], i) => { b += ring(x, y, r); b += dot(x, y, i === 0 ? 1.5 : 0.9); if (i === 0) b += ring(x, y, r + 2.6); });
+      GEOMETRY.netcircuit.edges.forEach((e) => { const c = e.pts[1]; b += dot(c[0], c[1], 0.7, 0.9); });
     } else if (type === 'contour') {
       const blob = (cx, cy, R, ph) => { let d = ''; for (let i = 0; i <= 72; i++) { const t = (i / 72) * 2 * Math.PI, rr = R * (1 + 0.13 * Math.sin(3 * t + ph) + 0.07 * Math.sin(5 * t + 2 * ph)); d += (i ? 'L' : 'M') + (cx + rr * Math.cos(t)).toFixed(1) + ' ' + (cy + rr * Math.sin(t)).toFixed(1); } return d + 'Z'; };
       [11, 20, 30, 41, 53, 66, 80, 96].forEach((R, i) => { b += `<path d="${blob(196, 20, R, i * 0.6)}" ${st(0.3)}/>`; });
@@ -292,18 +323,13 @@
       case 'waves': w = 40; h = 14; body = `<path d="M0 7Q10 0 20 7T40 7" fill="none" stroke="${col}" stroke-width="1.2" ${a}/>`; break;
       case 'zigzag': w = 16; h = 9; body = `<path d="M0 8L8 1L16 8" fill="none" stroke="${col}" stroke-width="1.2" ${a}/>`; break;
       case 'triangles': w = h = 26; body = `<path d="M13 4L22 20H4Z" fill="none" stroke="${col}" stroke-width="1" ${a}/>`; break;
-      case 'circuit': { // PCB traces with 45-degree bends and via rings; edges line up so the tile repeats seamlessly
-        w = h = 60;
-        const st = `fill="none" stroke="${col}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" ${a}`;
-        body = `<g ${st}>` +
-          '<path d="M0 14H20L32 26V44L44 56V60"/><path d="M44 0V6L52 14H60"/>' +
-          '<path d="M0 40H4L8 44V60"/><path d="M8 0V4L12 8H20"/>' +
-          '<path d="M60 30H50L46 34H38"/><path d="M0 30H2"/><path d="M24 60V52L30 46"/><path d="M24 0V4"/>' +
-          '</g>' +
-          `<g fill="none" stroke="${col}" stroke-width="1.2" ${a}>` +
-          '<circle cx="0" cy="14" r="2.4"/><circle cx="60" cy="14" r="2.4"/><circle cx="20" cy="8" r="2.4"/><circle cx="38" cy="30" r="2.4"/><circle cx="30" cy="46" r="2.4"/><circle cx="2" cy="30" r="2.4"/>' +
-          '</g>' +
-          `<g fill="${col}" ${a}><circle cx="32" cy="26" r="1.4"/><circle cx="44" cy="56" r="1.4"/><circle cx="8" cy="44" r="1.4"/><circle cx="52" cy="14" r="1.4"/></g>`;
+      case 'circuit': { // PCB traces with 45-degree bends; the trace chain continues across tile edges (nothing crosses)
+        w = h = GEOMETRY.circuitTile.size;
+        const lineSt = `fill="none" stroke="${col}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" ${a}`;
+        body = GEOMETRY.circuitTile.lines.map((l) => {
+          const rings = ['start', 'end'].filter((k) => l[k] === 'ring').map((k) => { const q = k === 'start' ? l.pts[0] : l.pts[l.pts.length - 1]; return `<circle cx="${q[0]}" cy="${q[1]}" r="2.3" ${lineSt}/>`; }).join('');
+          return `<path d="${polyD(l.pts)}" ${lineSt}/>${rings}<circle cx="${l.pts[1][0]}" cy="${l.pts[1][1]}" r="1.3" fill="${col}" ${a}/>`;
+        }).join('');
         break;
       }
       case 'network': { // nodes and links; links run to shared corner nodes so tiles join without seams
@@ -544,5 +570,5 @@
     return `<div class="${cls.join(' ')}" style="${style}">${html}</div>`;
   }
 
-  return { render, pageBg, layoutInfo, columnWidths, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl, setIconLib, libs };
+  return { GEOMETRY, render, pageBg, layoutInfo, columnWidths, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl, setIconLib, libs };
 });
