@@ -9,6 +9,17 @@ services:
       ALLOW_REGISTRATION: "true"  # "false" closes sign-ups
       COOKIE_SECURE: "true"       # served over HTTPS through the Pangolin tunnel
       TRUST_PROXY: "true"
+      # --- Admin account (created/updated from these values on every start) ---
+      ADMIN_EMAIL: ""             # e.g. admin@example.com
+      ADMIN_PASSWORD: ""          # 8+ characters; leave empty if the admin signs in with SSO only
+      # --- Authentik SSO (OpenID Connect); all three of ISSUER/CLIENT_ID/CLIENT_SECRET enable it ---
+      PUBLIC_URL: ""              # public https URL of this app, e.g. https://resume.example.com
+      OIDC_ISSUER: ""             # e.g. https://auth.example.com/application/o/enhanceresume/
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      # OIDC_ADMIN_GROUP: "enhanceresume-admins"   # authentik group whose members become admins
+      # OIDC_AUTO_CREATE: "true"                   # create accounts on first SSO login
+      # DISABLE_PASSWORD_LOGIN: "false"            # "true" = SSO only (ADMIN_EMAIL keeps password login)
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:

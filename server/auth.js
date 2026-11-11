@@ -48,10 +48,17 @@ function endSession(req, res) {
 function loadUser(req) {
   const token = parseCookies(req)[COOKIE];
   if (!token) return null;
-  const row = db.prepare(`SELECT u.id, u.email, u.name, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(sha(token));
-  if (!row) return null;
+  const row = db.prepare(`SELECT u.id, u.email, u.name, u.is_admin, u.disabled, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(sha(token));
+  if (!row || row.disabled) return null;
   if (row.expires_at < Date.now()) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha(token)); return null; }
-  return { id: row.id, email: row.email, name: row.name };
+  return { id: row.id, email: row.email, name: row.name, isAdmin: !!row.is_admin };
+}
+
+function userOut(u) { return { id: u.id, email: u.email, name: u.name, isAdmin: !!(u.isAdmin ?? u.is_admin) }; }
+
+function requireAdmin(req, res, next) {
+  if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Admin only' });
+  next();
 }
 
 function requireAuth(req, res, next) {
@@ -81,4 +88,4 @@ function rateLimit(key, max, windowMs) {
 
 setInterval(() => db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600 * 1000).unref();
 
-module.exports = { hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };
+module.exports = { userOut, requireAdmin, sha, hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };

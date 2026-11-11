@@ -33,20 +33,31 @@ name: enhanceresume
 services:
   enhanceresume:
     image: ghcr.io/amurikurthy/enhanceresume:latest
-    build: .
+    build: .                      # `docker compose up --build` builds locally instead of pulling
     container_name: enhanceresume
     restart: always
     environment:
-      ALLOW_REGISTRATION: "true"
-      COOKIE_SECURE: "true"
+      ALLOW_REGISTRATION: "true"  # "false" closes sign-ups
+      COOKIE_SECURE: "true"       # served over HTTPS through the Pangolin tunnel
       TRUST_PROXY: "true"
+      # --- Admin account (created/updated from these values on every start) ---
+      ADMIN_EMAIL: ""             # e.g. admin@example.com
+      ADMIN_PASSWORD: ""          # 8+ characters; leave empty if the admin signs in with SSO only
+      # --- Authentik SSO (OpenID Connect); all three of ISSUER/CLIENT_ID/CLIENT_SECRET enable it ---
+      PUBLIC_URL: ""              # public https URL of this app, e.g. https://resume.example.com
+      OIDC_ISSUER: ""             # e.g. https://auth.example.com/application/o/enhanceresume/
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      # OIDC_ADMIN_GROUP: "enhanceresume-admins"   # authentik group whose members become admins
+      # OIDC_AUTO_CREATE: "true"                   # create accounts on first SSO login
+      # DISABLE_PASSWORD_LOGIN: "false"            # "true" = SSO only (ADMIN_EMAIL keeps password login)
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:
-      - er-data:/data
-    shm_size: "512mb"
+      - er-data:/data             # SQLite database persists here
+    shm_size: "512mb"             # Chromium needs shared memory for PDF rendering
     # ports:
-    #   - "3000:3000"   # uncomment to reach it directly (then set COOKIE_SECURE: "false")
+    #   - "3000:3000"             # uncomment to reach it directly (use COOKIE_SECURE: "false" over plain http)
 
   enhanceresume-newt:
     image: fosrl/newt
@@ -76,8 +87,43 @@ Create the site in Pangolin to get `NEWT_ID` and `NEWT_SECRET`. Data (SQLite) li
 | `TRUST_PROXY` | – | `true` behind a reverse proxy (correct client IPs for rate limits) |
 | `MAX_RESUMES_PER_USER` | `50` | per-account cap |
 | `PDF_CONCURRENCY` | `3` | simultaneous Chromium renders |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | – | administrator account, created on start; the password from the environment is re-applied on every start |
+| `PUBLIC_URL` | – | public base URL; used to build the SSO redirect URI |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | – | set all three to enable SSO |
+| `OIDC_SCOPES` | `openid profile email` | add `groups` if your provider needs it for the groups claim |
+| `OIDC_BUTTON_LABEL` | `Sign in with Authentik` | login button text |
+| `OIDC_ADMIN_GROUP` | – | members of this group are administrators (synced at each login) |
+| `OIDC_AUTO_CREATE` | `true` | create an account on first SSO login (`false` = only existing users) |
+| `OIDC_TRUST_EMAIL` | `true` | link an SSO login to an existing local account with the same email |
+| `DISABLE_PASSWORD_LOGIN` | `false` | SSO only; the `ADMIN_EMAIL` account keeps password login as a break-glass |
+| `OIDC_REDIRECT_URI` | `PUBLIC_URL/api/auth/oidc/callback` | override the redirect URI |
+| `SESSION_SECRET` | generated | signs the short-lived SSO state cookie; generated into `/data/session.key` if unset |
 
 Without Docker: `npm ci && npm run build:assets && npm start` (Node ≥ 22.13, Chromium via `CHROME_PATH`).
+
+## Admin account
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the environment. On every start the account is created (or promoted and its password reset to match the environment), so rotating the password is just a redeploy; existing sessions for it are revoked. That account cannot be disabled, demoted or deleted from the UI.
+
+Admins get an **Admin** page in the top bar to see accounts (resume counts, last login), create users, reset passwords, disable/enable, promote/demote and delete accounts. Admins cannot read other users' resumes.
+
+## Authentik SSO
+
+EnhanceResume signs users in with OpenID Connect (authorization code flow + PKCE), so Authentik, or any OIDC provider, works.
+
+1. In Authentik create an **OAuth2/OpenID Provider** (Applications → Providers): client type *Confidential*, redirect URI (strict) `https://<your-host>/api/auth/oidc/callback`, scopes `openid`, `email`, `profile`. Pick a **signing key** (RS256 is recommended; the default HS256 with the client secret also works).
+2. Create an **Application** that uses the provider, with slug e.g. `enhanceresume`. Optionally create a group such as `enhanceresume-admins`.
+3. Set the environment variables:
+   ```yaml
+   PUBLIC_URL: "https://resume.example.com"
+   OIDC_ISSUER: "https://auth.example.com/application/o/enhanceresume/"
+   OIDC_CLIENT_ID: "<client id>"
+   OIDC_CLIENT_SECRET: "<client secret>"
+   OIDC_ADMIN_GROUP: "enhanceresume-admins"   # optional
+   ```
+4. A **Sign in with Authentik** button appears on the login page. New users are created on first sign in; a user whose email matches an existing local account is linked to it. Set `DISABLE_PASSWORD_LOGIN: "true"` for SSO-only (the `ADMIN_EMAIL` account can still use "Local administrator sign in"). Signing out ends the EnhanceResume session only, not the Authentik one.
+
+The group claim comes from Authentik's `profile` scope mapping; if admin promotion doesn't work, check that the user's ID token or userinfo contains `groups`.
 
 ## Features
 

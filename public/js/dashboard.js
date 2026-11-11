@@ -7,7 +7,7 @@ const T = window.ERT;
 export function topbar(extra) {
   return h('header', { class: 'topbar' },
     h('a', { class: 'logo', href: '#/' }, h('span', { class: 'logo-mark' }), 'EnhanceResume'),
-    h('div', { class: 'spacer' }), extra,
+    h('div', { class: 'spacer' }), extra, state.user.isAdmin ? h('a', { class: 'btn ghost', href: '#/admin' }, 'Admin') : null,
     themeButton(), h('div', { class: 'user' }, h('span', { class: 'avatar' }, (state.user.name || '?')[0].toUpperCase()), h('span', { class: 'uname' }, state.user.name),
       h('button', { class: 'btn ghost', onclick: logout }, 'Sign out')));
 }

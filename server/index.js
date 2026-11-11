@@ -5,6 +5,9 @@ const { db } = require('./db');
 const A = require('./auth');
 const T = require('../shared/templates');
 const { renderPdf } = require('./pdf');
+const { cfg } = require('./config');
+const admin = require('./admin');
+const sso = require('./sso');
 
 const app = express();
 if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : process.env.TRUST_PROXY);
@@ -19,37 +22,49 @@ app.use(express.json({ limit: '4mb' }));
 app.use('/api', A.csrfGuard);
 
 const ROOT = path.join(__dirname, '..');
-const ALLOW_REG = process.env.ALLOW_REGISTRATION !== 'false';
 const MAX_RESUMES = Number(process.env.MAX_RESUMES_PER_USER || 50);
 
 /* ---------- auth ---------- */
 const emailOk = (e) => typeof e === 'string' && e.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 app.post('/api/auth/register', (req, res) => {
-  if (!ALLOW_REG) return res.status(403).json({ error: 'Registration is disabled' });
+  const c = cfg();
+  if (!c.allowRegistration || c.passwordLoginDisabled) return res.status(403).json({ error: 'Registration is disabled' });
   if (!A.rateLimit('reg:' + req.ip, 10, 3600e3)) return res.status(429).json({ error: 'Too many attempts, try later' });
   const { email, password, name } = req.body || {};
   if (!emailOk(email)) return res.status(400).json({ error: 'Enter a valid email' });
   if (typeof password !== 'string' || password.length < 8 || password.length > 200) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   const nm = String(name || '').trim().slice(0, 100) || email.split('@')[0];
   if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) return res.status(409).json({ error: 'An account with that email already exists' });
-  const info = db.prepare('INSERT INTO users (email, name, pass_hash, created_at) VALUES (?,?,?,?)').run(email.trim(), nm, A.hashPassword(password), Date.now());
+  const info = db.prepare('INSERT INTO users (email, name, pass_hash, created_at, last_login) VALUES (?,?,?,?,?)').run(email.trim(), nm, A.hashPassword(password), Date.now(), Date.now());
   const id = Number(info.lastInsertRowid);
   A.startSession(req, res, id);
-  res.json({ user: { id, email: email.trim(), name: nm } });
+  res.json({ user: { id, email: email.trim(), name: nm, isAdmin: false } });
 });
 
 app.post('/api/auth/login', (req, res) => {
+  const c = cfg();
   const { email, password } = req.body || {};
   if (!A.rateLimit('login:' + req.ip + ':' + String(email).toLowerCase(), 10, 15 * 60e3)) return res.status(429).json({ error: 'Too many attempts, try again later' });
+  if (c.passwordLoginDisabled && String(email).trim().toLowerCase() !== c.adminEmail) return res.status(403).json({ error: 'Password sign-in is disabled, use SSO' });
   const u = emailOk(email) && typeof password === 'string' ? db.prepare('SELECT * FROM users WHERE email = ?').get(email) : null;
   if (!u || !A.verifyPassword(password, u.pass_hash)) return res.status(401).json({ error: 'Invalid email or password' });
+  if (u.disabled) return res.status(403).json({ error: 'This account is disabled' });
+  db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(Date.now(), u.id);
   A.startSession(req, res, u.id);
-  res.json({ user: { id: u.id, email: u.email, name: u.name } });
+  res.json({ user: A.userOut(u) });
 });
 
 app.post('/api/auth/logout', (req, res) => { A.endSession(req, res); res.json({ ok: true }); });
-app.get('/api/auth/me', (req, res) => res.json({ user: A.loadUser(req), registration: ALLOW_REG }));
+app.get('/api/auth/me', (req, res) => {
+  const c = cfg();
+  res.json({
+    user: A.loadUser(req), registration: c.allowRegistration && !c.passwordLoginDisabled,
+    passwordLogin: !c.passwordLoginDisabled, oidc: c.oidc ? { label: c.oidc.label } : null,
+  });
+});
+app.use('/api/auth/oidc', sso.router);
+app.use('/api/admin', A.csrfGuard, admin.router);
 
 /* ---------- resumes (every query is scoped to req.user.id: tenant isolation) ---------- */
 const api = express.Router();
@@ -144,6 +159,7 @@ app.use((err, req, res, next) => { // eslint-disable-line
   res.status(500).json({ error: 'Server error' });
 });
 
+admin.ensureEnvAdmin();
 const PORT = Number(process.env.PORT || 3000);
 if (require.main === module) app.listen(PORT, '0.0.0.0', () => console.log(`EnhanceResume listening on :${PORT}`));
 module.exports = app;

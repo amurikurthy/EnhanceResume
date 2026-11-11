@@ -32,4 +32,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_resumes_user ON resumes(user_id, updated_at DESC);
 `);
 
+// lightweight migrations for columns added after the first release
+const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+for (const [name, ddl] of [
+  ['is_admin', 'INTEGER NOT NULL DEFAULT 0'], ['disabled', 'INTEGER NOT NULL DEFAULT 0'],
+  ['oidc_sub', 'TEXT'], ['last_login', 'INTEGER'],
+]) if (!cols.includes(name)) db.exec(`ALTER TABLE users ADD COLUMN ${name} ${ddl}`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_users_oidc ON users(oidc_sub)');
+
 module.exports = { db, DATA_DIR };

@@ -13,6 +13,7 @@ async function call(method, url, body) {
 export const get = (u) => call('GET', u);
 export const post = (u, b) => call('POST', u, b || {});
 export const put = (u, b) => call('PUT', u, b);
+export const patch = (u, b) => call('PATCH', u, b);
 export const del = (u) => call('DELETE', u);
 
 export async function pdfBlob(id) {
