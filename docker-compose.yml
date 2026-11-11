@@ -1,21 +1,36 @@
+name: enhanceresume
 services:
   enhanceresume:
-    build: .
-    image: enhanceresume:latest
+    image: ghcr.io/amurikurthy/enhanceresume:latest
+    build: .                      # `docker compose up --build` builds locally instead of pulling
     container_name: enhanceresume
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
+    restart: always
     environment:
-      # Set to "false" to close sign-ups once your users have registered
-      ALLOW_REGISTRATION: "true"
-      # Set to "true" when serving over HTTPS (behind a reverse proxy) so cookies are Secure
-      COOKIE_SECURE: "false"
-      # TRUST_PROXY: "true"   # enable behind nginx/traefik so rate limiting sees real client IPs
+      ALLOW_REGISTRATION: "true"  # "false" closes sign-ups
+      COOKIE_SECURE: "true"       # served over HTTPS through the Pangolin tunnel
+      TRUST_PROXY: "true"
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:
-      - er-data:/data
-    shm_size: "512mb"   # Chromium needs shared memory for PDF rendering
+      - er-data:/data             # SQLite database persists here
+    shm_size: "512mb"             # Chromium needs shared memory for PDF rendering
+    # ports:
+    #   - "3000:3000"             # uncomment to reach it directly (use COOKIE_SECURE: "false" over plain http)
+
+  enhanceresume-newt:
+    image: fosrl/newt
+    container_name: enhanceresume-newt
+    restart: always
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.borderleaf.com
+      - NEWT_ID=
+      - NEWT_SECRET=
+    extra_hosts:
+      - "docker-host:host-gateway"
+
 volumes:
   er-data:
+
+networks:
+  default:
+    name: enhanceresume

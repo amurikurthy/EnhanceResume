@@ -16,38 +16,58 @@ A self-hosted, multi-tenant resume builder with live preview, drag & drop editin
 
 ```bash
 git clone https://github.com/amurikurthy/EnhanceResume.git && cd EnhanceResume
-docker compose up -d --build     # then open http://localhost:3000
+# edit NEWT_ID / NEWT_SECRET in docker-compose.yml (or remove the newt service), then:
+docker compose up -d
 ```
 
-Common commands: `docker compose logs -f` (logs), `docker compose down` (stop; data is kept), `docker compose down -v` (stop and **delete all data**), `docker compose up -d --build` (rebuild after pulling updates).
+The image `ghcr.io/amurikurthy/enhanceresume:latest` is built and published by GitHub Actions on every push to `main`. To build locally instead: `docker compose up -d --build`.
+
+Common commands: `docker compose logs -f` (logs), `docker compose down` (stop; data is kept), `docker compose down -v` (stop and **delete all data**), `docker compose pull && docker compose up -d` (update).
 
 ### docker-compose.yml
 
-The repo ships this file; edit the environment values to suit:
+The app runs next to a [Newt](https://github.com/fosrl/newt) sidecar, which tunnels it to your Pangolin instance, so no host port is published. In Pangolin, point the resource at target `enhanceresume:3000`.
 
 ```yaml
+name: enhanceresume
 services:
   enhanceresume:
+    image: ghcr.io/amurikurthy/enhanceresume:latest
     build: .
-    image: enhanceresume:latest
     container_name: enhanceresume
-    restart: unless-stopped
-    ports:
-      - "3000:3000"            # host:container, change the left side to use another port
+    restart: always
     environment:
-      ALLOW_REGISTRATION: "true"   # "false" closes sign-ups
-      COOKIE_SECURE: "false"       # "true" when served over HTTPS
-      # TRUST_PROXY: "true"        # enable behind nginx/traefik
+      ALLOW_REGISTRATION: "true"
+      COOKIE_SECURE: "true"
+      TRUST_PROXY: "true"
       MAX_RESUMES_PER_USER: "50"
       PDF_CONCURRENCY: "3"
     volumes:
-      - er-data:/data          # SQLite database persists here
-    shm_size: "512mb"          # Chromium needs shared memory for PDF rendering
+      - er-data:/data
+    shm_size: "512mb"
+    # ports:
+    #   - "3000:3000"   # uncomment to reach it directly (then set COOKIE_SECURE: "false")
+
+  enhanceresume-newt:
+    image: fosrl/newt
+    container_name: enhanceresume-newt
+    restart: always
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.borderleaf.com
+      - NEWT_ID=
+      - NEWT_SECRET=
+    extra_hosts:
+      - "docker-host:host-gateway"
+
 volumes:
   er-data:
+
+networks:
+  default:
+    name: enhanceresume
 ```
 
-Create an account on the sign-in page. Data (SQLite) lives in the `er-data` volume at `/data`.
+Create the site in Pangolin to get `NEWT_ID` and `NEWT_SECRET`. Data (SQLite) lives in the `er-data` volume at `/data`.
 
 | Env var | Default | Purpose |
 |---|---|---|
