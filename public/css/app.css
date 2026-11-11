@@ -416,3 +416,10 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .title-wrap .doc-title { position: absolute; inset: 0; width: 100% !important; height: 100%; min-width: 0; padding: 0 11px; text-overflow: ellipsis; transition: width .15s ease, box-shadow .15s ease; }
 .title-wrap .doc-title:focus { text-overflow: clip; width: max(100%, min(900px, 80vw)) !important; z-index: 30; background: var(--surface) !important; border-color: var(--brand) !important; box-shadow: 0 6px 24px rgba(10,15,40,.22); }
 .topbar .title-wrap { flex-shrink: 1; }
+
+/* performance: template cards only render when scrolled into view, and each thumbnail is an isolated, fixed-size paint area */
+.tpl-grid .tpl { content-visibility: auto; contain-intrinsic-size: auto 340px; contain: layout style; }
+.thumb { contain: strict; } .thumb-in { backface-visibility: hidden; }
+/* while the divider is being dragged, thumbnails are not repainted at all */
+body.resizing .tpl-grid { content-visibility: hidden; contain-intrinsic-size: auto 2400px; }
+body.resizing .stage .sheet { will-change: transform; }

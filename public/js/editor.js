@@ -324,7 +324,8 @@ export async function mountEditor(root, id) {
   const setZoom = (z) => { zoomMode = 'manual'; zoom = Math.min(2, Math.max(0.3, z)); applyZoom(); hideFloats(); };
   const onProfile = () => { paintPreview(); if (tab === 'content') drawPanel(); };
   window.addEventListener('er-profile', onProfile);
-  const ro = new ResizeObserver(() => { if (zoomMode === 'fit') applyZoom(); });
+  let roRaf = 0;
+  const ro = new ResizeObserver(() => { if (zoomMode === 'fit' && !document.body.classList.contains('resizing') && !roRaf) roRaf = requestAnimationFrame(() => { roRaf = 0; applyZoom(); }); });
   ro.observe(stage);
 
   /* a lightweight change from typing in the preview: keep the DOM (and caret) intact */
@@ -1565,8 +1566,16 @@ export async function mountEditor(root, id) {
     handle.addEventListener('pointerdown', (e) => {
       e.preventDefault(); handle.setPointerCapture(e.pointerId); handle.classList.add('drag'); document.body.classList.add('resizing');
       const startX = e.clientX, startW = el.offsetWidth;
-      const move = (ev) => { const dx = fromRight ? startX - ev.clientX : ev.clientX - startX; el.style.width = Math.max(min, Math.min(max(), startW + dx)) + 'px'; applyZoom(); positionBars(); };
-      const up = () => { handle.releasePointerCapture(e.pointerId); handle.classList.remove('drag'); document.body.classList.remove('resizing'); lsSet(key, el.offsetWidth); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); };
+      // one layout update per animation frame; the (expensive) preview re-fit happens once the drag settles
+      let raf2 = 0, lastX = e.clientX;
+      const apply = () => { raf2 = 0; const dx = fromRight ? startX - lastX : lastX - startX; el.style.width = Math.max(min, Math.min(max(), startW + dx)) + 'px'; };
+      const move = (ev) => { lastX = ev.clientX; if (!raf2) raf2 = requestAnimationFrame(apply); };
+      const up = () => {
+        if (raf2) { cancelAnimationFrame(raf2); apply(); }
+        handle.releasePointerCapture(e.pointerId); handle.classList.remove('drag'); document.body.classList.remove('resizing'); lsSet(key, el.offsetWidth);
+        handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up);
+        applyZoom(); positionBars();
+      };
       handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up);
     });
   }
