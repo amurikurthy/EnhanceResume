@@ -140,10 +140,12 @@ export async function mountEditor(root, id) {
     measure();
   }
   /* ----- page-aware layout: the preview mirrors the PDF's pagination (entries and bullets never split across a page) ----- */
+  const PAGE_VOID = 28; // px of background shown between two sheets in the preview
   const curDoc = () => previewDoc || doc;
   const pageGeom = () => {
     const m = curDoc().settings.margins, [, ph] = T.PAGE_MM[curDoc().settings.pageSize];
-    const cap = (ph - m.top - m.bottom) * MM, gap = (m.top + m.bottom) * MM;
+    // between two pages' content there is: bottom margin + visible void between the sheets + next page's top margin
+    const cap = (ph - m.top - m.bottom) * MM, gap = (m.top + m.bottom) * MM + PAGE_VOID;
     return { cap, gap, stride: cap + gap };
   };
   const ATOMS = '.rz-entry, .rz-sg, .rz-li, .rz-lv, .rz-text';
@@ -206,8 +208,9 @@ export async function mountEditor(root, id) {
     layoutPages();
     const hh = content.firstChild ? content.firstChild.offsetHeight : 0;
     const pages = Math.max(1, Math.floor((hh - 0.5) / g.stride) + 1);
-    sheet.style.minHeight = pages * g.stride + 'px';
-    guides.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'page-band', style: { top: (i + 1) * g.stride - m.bottom * MM + 'px', height: g.gap + 'px' } }, h('span', null, `Page ${i + 2}`))));
+    sheet.style.minHeight = pages * g.stride - PAGE_VOID + 'px';
+    // the void sits exactly between page k's bottom edge and page k+1's top edge, so both pages keep their full margins
+    guides.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'page-band', style: { top: (i + 1) * g.stride - PAGE_VOID + 'px', height: PAGE_VOID + 'px' } }, h('span', null, `Page ${i + 2}`))));
     pagesEl.textContent = pages + (pages === 1 ? ' page' : ' pages');
     pagesEl.classList.toggle('warn', pages > 2);
     applyZoom();
