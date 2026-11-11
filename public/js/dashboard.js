@@ -51,7 +51,7 @@ export async function mountDashboard(root) {
       h('button', { class: 'card new', onclick: async () => { const r = await newResumeDialog().catch((e) => { toast(e.message, 'err'); }); if (r) location.hash = '#/edit/' + r.id; } },
         h('span', { class: 'plus' }, '+'), 'New resume'),
       ...list.map((r) => h('div', { class: 'card resume' },
-        h('a', { class: 'thumb-link', href: '#/edit/' + r.id }, thumb(r.data, 220)),
+        h('a', { class: 'thumb-link', href: '#/edit/' + r.id }, thumb(r.data, 300)),
         h('div', { class: 'card-meta' },
           h('a', { class: 'rtitle', href: '#/edit/' + r.id }, r.title),
           h('small', null, 'Edited ' + new Date(r.updated_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) + ' · ' + (T.TEMPLATES.find((t) => t.id === r.data.settings.template) || {}).name)),
