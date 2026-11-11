@@ -457,8 +457,8 @@
     const ic = ds === 'icons';
     const F = (f, mode, ph) => fa(`E:${sid}:${it.id}:${f}`, mode, ph);
     const org = EDIT ? esc(it.org) : it.org ? (safeUrl(it.orgLink) ? `<a href="${esc(safeUrl(it.orgLink))}">${esc(it.org)}</a>` : esc(it.org)) : '';
-    const date = it.date || EDIT ? `<span class="rz-e-date">${ic ? icon('calendar') : ''}<span${F('date', 'line', 'Date')}>${esc(it.date)}</span></span>` : '';
-    const loc = it.location || EDIT ? `<span class="rz-e-loc">${ic ? icon('pin') : ''}<span${F('location', 'line', 'Location')}>${esc(it.location)}</span></span>` : '';
+    const date = it.date || EDIT ? `<span class="rz-e-date${it.date ? '' : ' is-empty'}">${ic ? icon('calendar') : ''}<span${F('date', 'line', 'Date')}>${esc(it.date)}</span></span>` : '';
+    const loc = it.location || EDIT ? `<span class="rz-e-loc${it.location ? '' : ' is-empty'}">${ic ? icon('pin') : ''}<span${F('location', 'line', 'Location')}>${esc(it.location)}</span></span>` : '';
     const bullets = it.bullets.map((b, i) => [b, i]).filter(([b]) => EDIT || b.trim());
     const mark = it.logo ? `<img class="rz-logo" src="${esc(it.logo)}" alt="">` : it.icon ? `<span class="rz-eicon" data-pick="entry">${icon(it.icon)}</span>` : '';
     return `<div class="rz-entry"${ia(it.id)}>` + mark +

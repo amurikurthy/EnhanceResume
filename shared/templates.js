@@ -650,6 +650,13 @@
     return next;
   }
 
+  /* layout & fonts from one template, colors & background from another (either may be empty = keep the current one) */
+  function mixTemplates(doc, layoutId, colorsId) {
+    let next = doc;
+    if (layoutId) next = applyTemplateParts(next, layoutId, 'layout');
+    if (colorsId) next = applyTemplateParts(next, colorsId, 'colors'); // colors last, so they adapt to the new layout
+    return next;
+  }
   function applyPalette(settings, paletteId) {
     const p = PALETTES.find((x) => x.id === paletteId);
     if (!p) return settings;
@@ -746,6 +753,6 @@
     setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
     ACCENT_GROUPS: [['Soft & floral', ['henna', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
     ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
-    applyTemplateParts, deepMerge, clone, uid, mix, luminance,
+    applyTemplateParts, mixTemplates, deepMerge, clone, uid, mix, luminance,
   };
 });

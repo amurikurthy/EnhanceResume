@@ -140,3 +140,7 @@
 .rz-halo.hs { margin: calc(var(--photo) * 0.42); }
 .rz-hd-text { position: relative; z-index: 2; }
 .rz-header:has(.rz-halo) { margin-bottom: var(--sgap); }
+
+/* in the editor an empty date/location stays clickable but must not leave a stray separator dot */
+.rz-e-loc.is-empty::before, .rz-e-date.is-empty + .rz-e-loc::before { display: none !important; }
+.rz-e-date.is-empty, .rz-e-loc.is-empty { opacity: .45; }

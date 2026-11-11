@@ -149,3 +149,47 @@ export function ctxMenu(items, x, y) {
   window.addEventListener('blur', closeCtx); window.addEventListener('resize', closeCtx); document.addEventListener('scroll', onScroll, true);
   ctxCleanup = () => { document.removeEventListener('mousedown', onDown, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('blur', closeCtx); window.removeEventListener('resize', closeCtx); document.removeEventListener('scroll', onScroll, true); };
 }
+
+/* ---------- photo cropper: drag to position, zoom with the slider or mouse wheel, outputs a square JPEG ---------- */
+export async function cropPhoto(source, { size = 480, shape = 'circle', title = 'Crop your photo' } = {}) {
+  const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+  const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Could not read that image')); img.src = url; }); }
+  catch (e) { toast(e.message, 'err'); return null; }
+  finally { if (typeof source !== 'string') setTimeout(() => URL.revokeObjectURL(url), 1000); }
+
+  const V = 300, iw = img.naturalWidth, ih = img.naturalHeight, base = Math.max(V / iw, V / ih);
+  let z = 1, x = 0, y = 0;
+  const s = () => base * z;
+  const clamp = () => { x = Math.min(0, Math.max(V - iw * s(), x)); y = Math.min(0, Math.max(V - ih * s(), y)); };
+  x = (V - iw * s()) / 2; y = (V - ih * s()) / 2;
+
+  const el = h('img', { src: img.src, alt: '', draggable: 'false', class: 'crop-img' });
+  const guide = h('div', { class: 'crop-guide' + (shape === 'circle' ? ' round' : '') });
+  const view = h('div', { class: 'crop-view', style: { width: V + 'px', height: V + 'px' } }, el, guide);
+  const slider = h('input', { type: 'range', min: 1, max: 4, step: 0.01, value: 1, 'aria-label': 'Zoom' });
+  const paint = () => { clamp(); Object.assign(el.style, { width: iw * s() + 'px', height: ih * s() + 'px', left: x + 'px', top: y + 'px' }); };
+  const setZoom = (nz) => { const cx = (V / 2 - x) / s(), cy = (V / 2 - y) / s(); z = Math.min(4, Math.max(1, nz)); x = V / 2 - cx * s(); y = V / 2 - cy * s(); slider.value = z; paint(); };
+  slider.addEventListener('input', () => setZoom(Number(slider.value)));
+  view.addEventListener('wheel', (e) => { e.preventDefault(); setZoom(z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)); }, { passive: false });
+  view.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); view.setPointerCapture(e.pointerId); view.classList.add('drag');
+    const sx = e.clientX, sy = e.clientY, ox = x, oy = y;
+    const move = (ev) => { x = ox + ev.clientX - sx; y = oy + ev.clientY - sy; paint(); };
+    const up = () => { view.classList.remove('drag'); view.removeEventListener('pointermove', move); view.removeEventListener('pointerup', up); };
+    view.addEventListener('pointermove', move); view.addEventListener('pointerup', up);
+  });
+  paint();
+
+  return modal(title, (close) => h('div', { class: 'crop' },
+    view,
+    h('label', { class: 'crop-zoom' }, h('span', null, '−'), slider, h('span', null, '+')),
+    h('p', { class: 'muted small center' }, 'Drag the photo to position it, use the slider or scroll wheel to zoom.'),
+    h('div', { class: 'pf-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(null) }, 'Cancel'),
+      h('button', { type: 'button', class: 'btn primary', onclick: () => {
+        const c = document.createElement('canvas'); c.width = c.height = size;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, -x / s(), -y / s(), V / s(), V / s(), 0, 0, size, size);
+        close(c.toDataURL('image/jpeg', 0.88));
+      } }, 'Use this photo'))), []);
+}

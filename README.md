@@ -125,6 +125,9 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 ## Features
 
 - **Template categories**: filter the gallery by tone (light / dark), vibe (masculine / feminine / neutral), look & feel (classic, modern, minimal, bold, elegant, creative) and colour family. The filters apply in the new-resume dialog and the editor's Templates tab.
+- **Preview before applying**: the Templates tab has a *Mix & match* builder (layout & fonts from one template, colors & background from another, with a live thumbnail) and an eye button on every template card. Either one previews the result on your real page with an *Apply this design* / *Back to current* banner; nothing changes until you apply, and Ctrl+Z undoes it.
+- **Calendar picker**: every entry date has a calendar button (also in the floating toolbar and the right-click menu) for start/end month and year, *Present*, single dates, and the formats 09/2023, Sep 2023 or 2023.
+- **Photo cropping**: uploading a profile or resume photo opens a cropper (drag to position, slider or scroll wheel to zoom, circle or square guide), and *Adjust crop* re-opens it later.
 - **Mix & match templates**: in the Templates tab choose to apply *Everything*, only *Layout & fonts* (keeps your colors) or only *Colors & background* (keeps your layout). Previews show the result on your own content, and borrowed colors are adapted (for example a readable sidebar) so they work with your layout.
 - **Sidebar follows the page**: click or type in any box on the resume and the sidebar scrolls to the matching control, opens its card and highlights it (and focusing a sidebar control highlights it on the page). It can be switched off with the checkbox at the top of the Content tab.
 - **Reset buttons**: every Design control shows a small ↺ next to it once it differs from the template's default; each group has its own reset, and there is a *Reset whole design* button (Ctrl+Z undoes it).

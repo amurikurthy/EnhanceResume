@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { h, toast, modal, photoDataUrl } from './ui.js';
+import { h, toast, modal, cropPhoto } from './ui.js';
 import { state } from './app.js';
 
 const FIELDS = [['headline', 'Headline / job title', 'e.g. Marketing Manager'], ['phone', 'Phone', '555-010-2030'], ['location', 'Location', 'Chicago, IL'],
@@ -23,11 +23,14 @@ export async function openProfile() {
   const drawPhoto = () => {
     const file = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onchange: async (e) => {
       const f = e.target.files[0]; if (!f) return;
-      try { photo = await photoDataUrl(f, 400); drawPhoto(); } catch (ex) { err.textContent = ex.message; }
+      e.target.value = '';
+      const out = await cropPhoto(f, { size: 400, shape: 'circle', title: 'Crop your profile photo' });
+      if (out) { photo = out; drawPhoto(); }
     } });
     photoBox.replaceChildren(
       photo ? h('img', { src: photo, alt: '' }) : h('div', { class: 'pf-empty' }, initials({ name: name.value || u.name })),
       h('div', { class: 'pf-photo-a' }, h('button', { type: 'button', class: 'btn small', onclick: () => file.click() }, photo ? 'Change photo' : 'Upload photo'),
+        photo ? h('button', { type: 'button', class: 'btn small', onclick: async () => { const out = await cropPhoto(photo, { size: 400, shape: 'circle', title: 'Adjust your profile photo' }); if (out) { photo = out; drawPhoto(); } } }, 'Adjust crop') : null,
         photo ? h('button', { type: 'button', class: 'btn small danger-t', onclick: () => { photo = ''; drawPhoto(); } }, 'Remove') : null,
         h('small', { class: 'muted' }, 'Used on new resumes. You can override it per resume.')), file);
   };

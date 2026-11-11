@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { h, toast, modal, confirmDlg, thumb, downloadBlob, photoDataUrl, logoDataUrl, ctxMenu, closeCtx } from './ui.js';
+import { h, toast, modal, confirmDlg, thumb, downloadBlob, cropPhoto, logoDataUrl, ctxMenu, closeCtx } from './ui.js';
 import { topbar } from './dashboard.js';
 import { ensureIconsFor, loadLucide, loadBrands } from './icons.js';
 import { state } from './app.js';
@@ -73,6 +73,7 @@ export async function mountEditor(root, id) {
     camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
     cols: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
     reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   };
   const ibtn = (name, title, fn, cls = '') => h('button', { type: 'button', class: 'fbtn ' + cls, title, 'aria-label': title, onmousedown: (e) => e.preventDefault(), onclick: fn, html: SVG(ICO[name]) });
 
@@ -123,6 +124,59 @@ export async function mountEditor(root, id) {
     pickerEl.style.top = (r.bottom + ph + 12 > innerHeight ? Math.max(8, r.top - ph - 6) : r.bottom + 6) + 'px';
     setTimeout(() => { document.addEventListener('mousedown', outsidePicker, true); search.focus(); }, 0);
   }
+
+  /* ---------------- calendar picker for date fields ("09/2023 - Present") ---------------- */
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function parseOneDate(t) {
+    t = String(t || '').trim();
+    if (/^(present|current|now|ongoing)$/i.test(t)) return 'present';
+    let m = t.match(/^(\d{1,2})\/(\d{4})$/); if (m && +m[1] >= 1 && +m[1] <= 12) return { y: +m[2], m: +m[1] };
+    m = t.match(/^([A-Za-z]{3,9})\.?,?\s+(\d{4})$/);
+    if (m) { const i = MONTHS.findIndex((x) => m[1].toLowerCase().startsWith(x.toLowerCase())); if (i >= 0) return { y: +m[2], m: i + 1 }; }
+    m = t.match(/^(\d{4})$/); if (m) return { y: +m[1], m: null };
+    return null;
+  }
+  function datePicker(current, onPick, anchor) {
+    closePicker();
+    const now = new Date();
+    const parts = String(current || '').split(/\s+(?:-|–|—|to)\s+/i).map(parseOneDate);
+    let fmt = 'num'; try { fmt = localStorage.getItem('er-date-fmt') || 'num'; } catch { /* private mode */ }
+    if (/^\d{4}$/.test(String(current || '').trim()) || (parts[0] && !parts[0].m && parts[0] !== 'present')) fmt = 'year';
+    const st = {
+      start: parts[0] && parts[0] !== 'present' ? { y: parts[0].y, m: parts[0].m || 1 } : { y: now.getFullYear() - 1, m: now.getMonth() + 1 },
+      end: parts.length > 1 && parts[1] && parts[1] !== 'present' ? { y: parts[1].y, m: parts[1].m || 12 } : { y: now.getFullYear(), m: now.getMonth() + 1 },
+      present: parts.length > 1 ? parts[1] === 'present' || !parts[1] : !current,
+      range: parts.length > 1 || !current,
+    };
+    const out = () => {
+      const f = (d) => (fmt === 'year' ? String(d.y) : fmt === 'abbr' ? `${MONTHS[d.m - 1]} ${d.y}` : `${String(d.m).padStart(2, '0')}/${d.y}`);
+      return st.range ? `${f(st.start)} - ${st.present ? 'Present' : f(st.end)}` : f(st.start);
+    };
+    const body = h('div', { class: 'dp' });
+    pickerEl = h('div', { class: 'icon-pop date-pop' }, body);
+    document.body.append(pickerEl);
+    const block = (label, key, disabled) => {
+      const d = st[key];
+      return h('div', { class: 'dp-block' + (disabled ? ' off' : '') },
+        h('div', { class: 'dp-head' }, h('b', null, label),
+          h('div', { class: 'dp-year' }, h('button', { type: 'button', class: 'icon-btn', disabled, onclick: () => { d.y--; draw(); } }, '‹'), h('span', null, d.y), h('button', { type: 'button', class: 'icon-btn', disabled, onclick: () => { d.y++; draw(); } }, '›'))),
+        fmt === 'year' ? null : h('div', { class: 'dp-months' }, MONTHS.map((n, i) => h('button', { type: 'button', disabled, class: 'dp-m' + (d.m === i + 1 ? ' on' : ''), onclick: () => { d.m = i + 1; draw(); } }, n))));
+    };
+    function draw() {
+      body.replaceChildren(...[
+        h('div', { class: 'seg dp-fmt' }, [['num', '09/2023'], ['abbr', 'Sep 2023'], ['year', '2023']].map(([k, l]) => h('button', { type: 'button', class: fmt === k ? 'on' : '', onclick: () => { fmt = k; try { localStorage.setItem('er-date-fmt', k); } catch { /* ignore */ } draw(); } }, l))),
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: st.range, onchange: (ev) => { st.range = ev.target.checked; draw(); } }), 'Date range'),
+        block(st.range ? 'Start' : 'Date', 'start', false),
+        st.range ? [h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: st.present, onchange: (ev) => { st.present = ev.target.checked; draw(); } }), 'Present (current)'), block('End', 'end', st.present)] : null,
+        h('div', { class: 'dp-foot' }, h('output', null, out()), h('button', { type: 'button', class: 'btn small', onclick: () => { closePicker(); onPick(''); } }, 'Clear'), h('button', { type: 'button', class: 'btn small primary', onclick: () => { closePicker(); onPick(out()); } }, 'Apply'))].flat().filter(Boolean));
+      const r = anchor.getBoundingClientRect(), pw = pickerEl.offsetWidth, ph = pickerEl.offsetHeight;
+      pickerEl.style.left = Math.max(8, Math.min(r.left, innerWidth - pw - 8)) + 'px';
+      pickerEl.style.top = (r.bottom + ph + 12 > innerHeight ? Math.max(8, r.top - ph - 6) : r.bottom + 6) + 'px';
+    }
+    draw();
+    setTimeout(() => document.addEventListener('mousedown', outsidePicker, true), 0);
+  }
+
   const iconBtn = (current, onPick, title = 'Choose an icon') => {
     const b = h('button', { type: 'button', class: 'icon-pick', title, html: current ? R.icon(current) : '<span class="plus">+</span>' });
     b.addEventListener('click', () => iconPicker(current, onPick, b));
@@ -377,7 +431,10 @@ export async function mountEditor(root, id) {
   function uploadPhoto() {
     const f = h('input', { type: 'file', accept: 'image/*', onchange: async () => {
       if (!f.files[0]) return;
-      try { doc.header.photo = await photoDataUrl(f.files[0]); doc.header.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; commit(); } catch (ex) { toast(ex.message, 'err'); }
+      const file = f.files[0]; f.value = '';
+      const out = await cropPhoto(file, { shape: S().header.photoShape === 'circle' || S().header.photoShape === 'none' ? 'circle' : 'square' });
+      if (!out) return;
+      doc.header.photo = out; doc.header.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; commit();
     } });
     f.click();
   }
@@ -422,6 +479,7 @@ export async function mountEditor(root, id) {
       const it = sec.items.find((x) => x.id === p[2]); if (!it) return;
       target = f.closest('[data-iid]');
       const kind = kindOf(sec);
+      if (k === 'E' && p[3] === 'date') { const cal = ibtn('calendar', 'Pick dates', () => datePicker(it.date, (v) => { it.date = v; commit(f.dataset.f); }, cal)); btns.push(cal); }
       if (KIND_LABEL[kind]) btns.push(h('button', { type: 'button', class: 'fbtn add', onmousedown: (e) => e.preventDefault(), onclick: () => { const n = T.newItem(sec.type); sec.items.splice(sec.items.indexOf(it) + 1, 0, n); commit(firstField(sec, n)); } }, h('span', { html: SVG(ICO.plus) }), KIND_LABEL[kind]));
       if (kind === 'entries') btns.push(ibtn('plus', 'Add bullet point', () => { it.bullets.push(''); commit(`BL:${sec.id}:${it.id}`); }, 'txt'));
       if (kind === 'skills') btns.push(ibtn('plus', 'Add skill', () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); }, 'txt'));
@@ -553,6 +611,10 @@ export async function mountEditor(root, id) {
     const el = h(o.area ? 'textarea' : 'input', { type: o.area ? null : 'text', value: get(), placeholder: o.ph || '', rows: o.rows || 3, maxlength: o.max || 300, class: o.area ? 'auto' : '' });
     el.addEventListener('input', () => { set(el.value); touch(); });
     if (o.fid) el.dataset.fid = o.fid;
+    if (o.date) {
+      const btn = h('button', { type: 'button', class: 'icon-btn dp-btn', title: 'Pick dates', 'aria-label': 'Pick dates', html: SVG(ICO.calendar), onclick: () => datePicker(el.value, (v) => { el.value = v; set(v); touch(); }, btn) });
+      return field(label, h('div', { class: 'with-btn' }, el, btn), o.cls);
+    }
     return field(label, el, o.cls);
   }
   const getPath = (o, p) => p.split('.').reduce((a, k) => a[k], o);
@@ -645,7 +707,7 @@ export async function mountEditor(root, id) {
     const detail = mode === 'profile'
       ? (state.user.photo ? h('small', { class: 'muted' }, 'Using the photo from your profile. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openProfile(); } }, 'Change it'))
         : h('small', { class: 'muted' }, 'You have no profile photo yet. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openProfile(); } }, 'Add one')))
-      : mode === 'custom' ? h('div', null, h('button', { type: 'button', class: 'btn small', onclick: () => photoIn.click() }, hd.photo ? 'Change photo' : 'Upload a photo'), hd.photo ? h('small', { class: 'muted' }, '  only used on this resume') : null)
+      : mode === 'custom' ? h('div', { class: 'photo-acts' }, h('button', { type: 'button', class: 'btn small', onclick: () => photoIn.click() }, hd.photo ? 'Change photo' : 'Upload a photo'), hd.photo ? h('button', { type: 'button', class: 'btn small', onclick: async () => { const out = await cropPhoto(hd.photo, { shape: S().header.photoShape === 'circle' ? 'circle' : 'square', title: 'Adjust photo crop' }); if (out) { hd.photo = out; touch(); drawPanel(); } } }, 'Adjust crop') : null, hd.photo ? h('small', { class: 'muted' }, 'only used on this resume') : null)
         : h('small', { class: 'muted' }, 'This resume has no photo.');
     return h('div', { class: 'photo-row' }, eff ? h('img', { class: 'photo-prev', src: eff, alt: '' }) : h('div', { class: 'photo-prev empty' }, '📷'), h('div', { class: 'stack' }, seg2, detail), photoIn);
   }
@@ -654,7 +716,10 @@ export async function mountEditor(root, id) {
     const hd = doc.header;
     const photoIn = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onchange: async (e) => {
       const f = e.target.files[0]; if (!f) return;
-      try { hd.photo = await photoDataUrl(f); hd.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; touch(); drawPanel(); } catch (ex) { toast(ex.message, 'err'); }
+      e.target.value = '';
+      const out = await cropPhoto(f, { shape: S().header.photoShape === 'circle' || S().header.photoShape === 'none' ? 'circle' : 'square' });
+      if (!out) return;
+      hd.photo = out; hd.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; touch(); drawPanel();
     } });
     const contacts = h('div', { class: 'rows' });
     sortList(contacts, hd.contacts, (i, redraw) => {
@@ -709,7 +774,7 @@ export async function mountEditor(root, id) {
       input(lbl.title, () => it.title, (v) => { it.title = v; upd(); }, { fid: `E:${sec.id}:${it.id}:title` }),
       input(lbl.org, () => it.org, (v) => { it.org = v; upd(); }, { fid: `E:${sec.id}:${it.id}:org` }),
       h('div', { class: 'two' },
-        input('Date', () => it.date, (v) => { it.date = v; }, { ph: '01/2022 - Present', fid: `E:${sec.id}:${it.id}:date` }),
+        input('Date', () => it.date, (v) => { it.date = v; }, { ph: '01/2022 - Present', fid: `E:${sec.id}:${it.id}:date`, date: true }),
         input('Location', () => it.location, (v) => { it.location = v; }, { fid: `E:${sec.id}:${it.id}:location` })),
       input('Link (optional)', () => it.orgLink, (v) => { it.orgLink = v; }, { ph: 'https://' }),
       h('div', { class: 'logo-row' }, h('span', { class: 'f-lbl', style: { margin: 0 } }, 'Icon'), iconBtn(it.icon, (v) => { it.icon = v; touch(); drawPanel(); }, 'Icon shown beside this entry'), h('span', { class: 'muted small' }, 'or upload a logo:')),
@@ -1043,14 +1108,40 @@ export async function mountEditor(root, id) {
   /* mix and match: take everything, only the layout & fonts, or only the colors & background from a template */
   const TPL_MODES = [['all', 'Everything'], ['layout', 'Layout & fonts'], ['colors', 'Colors & background']];
   const tplMode = () => { try { const m = localStorage.getItem('er-tpl-mode'); return TPL_MODES.some(([k]) => k === m) ? m : 'all'; } catch { return 'all'; } };
+  let mixLayout = '', mixColors = '';
+  function mixBuilder() {
+    const nameOf = (id) => (T.TEMPLATES.find((x) => x.id === id) || {}).name;
+    const label = () => `${mixLayout ? nameOf(mixLayout) + ' layout' : 'your layout'} + ${mixColors ? nameOf(mixColors) + ' colors' : 'your colors'}`;
+    const mixed = () => T.mixTemplates(doc, mixLayout, mixColors);
+    const thumbBox = h('div', { class: 'mix-prev' });
+    const summary = h('small', { class: 'muted' });
+    const pBtn = h('button', { type: 'button', class: 'btn small', onclick: () => previewDesign(label(), mixed()) }, h('span', { html: SVG('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>') }), 'Preview on page');
+    const aBtn = h('button', { type: 'button', class: 'btn small primary', onclick: () => applyDesignDoc(mixed(), label()) }, 'Apply');
+    const refresh = () => {
+      const none = !mixLayout && !mixColors;
+      pBtn.disabled = aBtn.disabled = none;
+      summary.textContent = none ? 'Choose a layout and/or a color scheme to combine.' : label();
+      thumbBox.replaceChildren(thumb(mixed(), 128));
+    };
+    const select = (label, get, set) => {
+      const el = h('select', null, h('option', { value: '' }, 'Keep my current'), T.TEMPLATES.map((t) => h('option', { value: t.id, selected: get() === t.id }, t.name)));
+      el.addEventListener('change', () => { set(el.value); refresh(); });
+      return h('label', { class: 'f' }, h('span', { class: 'f-head' }, label), el);
+    };
+    refresh();
+    return h('div', { class: 'mix' }, h('div', { class: 'f-lbl' }, 'Mix & match'),
+      h('div', { class: 'mix-grid' }, h('div', { class: 'mix-ctl' }, select('Layout & fonts from', () => mixLayout, (v) => { mixLayout = v; }), select('Colors & background from', () => mixColors, (v) => { mixColors = v; }), summary, h('div', { class: 'mix-btns' }, pBtn, aBtn)), thumbBox));
+  }
   function templatesTab() {
     const mode = tplMode();
     const note = { all: 'Switching templates keeps your text but resets all design options.',
       layout: 'Takes the layout, fonts, spacing and styles from the template and keeps your colors.',
       colors: 'Takes only the colors and background from the template and keeps your layout and fonts.' }[mode];
     const picker = h('div', { class: 'seg tpl-mode' }, TPL_MODES.map(([m, l]) => h('button', { type: 'button', class: mode === m ? 'on' : '', onclick: () => { try { localStorage.setItem('er-tpl-mode', m); } catch { /* private mode */ } drawPanel(); } }, l)));
+    const modeLabel = TPL_MODES.find(([m]) => m === mode)[1].toLowerCase();
     const browser = templateBrowser({
       sampleFor: (t) => T.applyTemplateParts(doc, t.id, mode), getCurrent: () => S().template, width: 120,
+      onPreview: (t) => previewDesign(mode === 'all' ? t.name : `${t.name} (${modeLabel})`, T.applyTemplateParts(doc, t.id, mode)),
       onPick: async (t) => {
         if (mode === 'all' && S().template === t.id) return;
         const msg = { all: 'This switches the design (layout, fonts, colors). Your content is kept.', layout: `Use ${t.name}'s layout, fonts and spacing and keep your current colors?`, colors: `Use ${t.name}'s colors and background and keep your current layout?` }[mode];
@@ -1058,7 +1149,7 @@ export async function mountEditor(root, id) {
         doc = T.applyTemplateParts(doc, t.id, mode); touch(); drawPanel();
       },
     });
-    return h('div', { class: 'tab-content' }, h('div', { class: 'tpl-apply' }, h('div', { class: 'f-lbl' }, 'Apply from a template'), picker, h('p', { class: 'muted small' }, note + ' Previews show the result on your content.')), browser);
+    return h('div', { class: 'tab-content' }, mixBuilder(), h('div', { class: 'tpl-apply' }, h('div', { class: 'f-lbl' }, 'Or apply a single template'), picker, h('p', { class: 'muted small' }, note + ' The eye on a card previews it on your page first.')), browser);
   }
 
   /* ---------------- version history drawer ---------------- */
@@ -1121,11 +1212,11 @@ export async function mountEditor(root, id) {
     try { await api.post(`/api/resumes/${id}/revisions`, { label }); toast('Version saved'); loadRevisions(); } catch (e) { toast(e.message, 'err'); }
   }
   /* preview an older state on the page without touching the current resume; restoring is an explicit, confirmed action */
-  function showPreview(pdoc, key, title, sub, onRestore) {
+  function showPreview(pdoc, key, title, sub, onRestore, applyLabel = 'Restore this version', lockPanel = true) {
     previewDoc = pdoc; previewRev = key;
     banner.replaceChildren(h('div', { class: 'pb-t' }, h('b', null, title), h('small', null, sub)),
-      h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: onRestore }, 'Restore this version')));
-    stage.classList.add('previewing'); panelEl.classList.add('locked');
+      h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: onRestore }, applyLabel)));
+    stage.classList.add('previewing'); if (lockPanel) panelEl.classList.add('locked');
     hideFloats(); paintPreview(); drawHistory();
     stage.scrollTo({ top: 0 });
   }
@@ -1164,6 +1255,14 @@ export async function mountEditor(root, id) {
       snapshot(); hideFloats(); paintPreview(); drawPanel(); loadRevisions(); toast('Version restored');
     } catch (e) { toast(e.message, 'err'); }
   }
+  /* design previews: see a template (or a layout + colors mix) on your real content before applying it */
+  function previewDesign(label, nd) {
+    showPreview(nd, { kind: 'design' }, `Previewing design: ${label}`, 'Your resume is unchanged until you apply it. Pick another template to compare, or go back.', () => applyDesignDoc(nd, label), 'Apply this design', false);
+  }
+  function applyDesignDoc(nd, label) {
+    previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
+    doc = nd; commit(); drawPanel(); toast(`${label} applied. Ctrl+Z undoes it`);
+  }
   function drawHistory() {
     const nameIn = h('input', { type: 'text', placeholder: 'Name this version…', maxlength: 80 });
     const doSave = () => { const v = nameIn.value.trim(); nameIn.value = ''; saveVersion(v || 'Saved version'); };
@@ -1194,7 +1293,7 @@ export async function mountEditor(root, id) {
 
 
   /* ---------------- right-click menus ---------------- */
-  const IC = { cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/>', copy: ICO.copy, paste: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+  const IC = { calendar: ICO.calendar, cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/>', copy: ICO.copy, paste: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
     bold: ICO.bold, italic: ICO.italic, link: ICO.link, unlink: ICO.unlink, plus: ICO.plus, up: ICO.up, down: ICO.down, trash: ICO.trash, star: ICO.star, camera: ICO.camera, sliders: ICO.sliders, undo: ICO.undo, redo: ICO.redo, grid: ICO.grid, cols: ICO.cols,
     clear: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/><path d="M3 3l18 18"/>', select: '<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' };
   const NEW_LABEL = { entries: 'entry', skills: 'group', list: 'item', levels: 'language' };
@@ -1287,7 +1386,8 @@ export async function mountEditor(root, id) {
     // 5. an entry, group, list item or language
     if (sec && it && NEW_LABEL[kind]) {
       const L = NEW_LABEL[kind], i = idxOf(sec, it);
-      return [{ label: `Add ${L} below`, icon: IC.plus, run: () => addItemAfter(sec, it) },
+      return [f && f.dataset.f.endsWith(':date') ? { label: 'Pick dates…', icon: IC.calendar, run: () => datePicker(it.date, (v) => { it.date = v; commit(f.dataset.f); }, f) } : null,
+        { label: `Add ${L} below`, icon: IC.plus, run: () => addItemAfter(sec, it) },
         kind === 'entries' ? { label: 'Add bullet point', icon: IC.plus, run: () => { it.bullets.push(''); commit(); focusBullet(sec, it, it.bullets.length - 1); } } : null,
         kind === 'skills' ? { label: 'Add skill', icon: IC.plus, run: () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); } } : null,
         { label: `Duplicate ${L}`, icon: IC.copy, run: () => duplicateItem(sec, it) },
@@ -1410,7 +1510,7 @@ export async function mountEditor(root, id) {
     const top = panelBody.scrollTop;
     // only animate when switching tabs; in-place refreshes (picking a theme, layout, pattern...) must not flash
     panelBody.classList.toggle('anim', tab !== lastTab); lastTab = tab;
-    tabs.replaceChildren(...[['content', 'Content'], ['design', 'Design'], ['templates', 'Templates']].map(([k, l]) => h('button', { class: tab === k ? 'on' : '', onclick: () => { tab = k; drawPanel(); } }, l)));
+    tabs.replaceChildren(...[['content', 'Content'], ['design', 'Design'], ['templates', 'Templates']].map(([k, l]) => h('button', { class: tab === k ? 'on' : '', onclick: () => { if (previewRev && previewRev.kind === 'design') exitPreview(); tab = k; drawPanel(); } }, l)));
     panelBody.replaceChildren(tab === 'content' ? contentTab() : tab === 'design' ? designTab() : templatesTab());
     panelBody.scrollTop = top;
     panelBody.querySelectorAll('textarea.auto').forEach(autosize);

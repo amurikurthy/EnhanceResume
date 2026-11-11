@@ -6,7 +6,7 @@ const active = { tone: null, vibe: null, style: null, color: null };
 const LABELS = { tone: 'Tone', vibe: 'Vibe', style: 'Look & feel', color: 'Color' };
 
 /* a filterable gallery of templates: tone (light/dark), vibe (masculine/feminine/neutral), look & feel and colour family */
-export function templateBrowser({ sampleFor, getCurrent, onPick, width = 150 }) {
+export function templateBrowser({ sampleFor, getCurrent, onPick, onPreview, width = 150 }) {
   const cache = new Map(); // template id -> button (thumbnails are rendered once per browser)
   const grid = h('div', { class: 'tpl-grid' });
   const filters = h('div', { class: 'tb-filters' });
@@ -19,6 +19,7 @@ export function templateBrowser({ sampleFor, getCurrent, onPick, width = 150 }) 
   function card(t) {
     if (!cache.has(t.id)) {
       cache.set(t.id, h('button', { type: 'button', class: 'tpl', 'data-id': t.id, onclick: () => { onPick(t); refresh(); } },
+        onPreview ? h('span', { class: 'tpl-eye', role: 'button', tabindex: '0', title: 'Preview on the page', 'aria-label': `Preview ${t.name} on the page`, onclick: (e) => { e.stopPropagation(); onPreview(t); }, html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>' }) : null,
         thumb(sampleFor(t), width), h('b', null, t.name), h('small', null, t.desc),
         h('span', { class: 'tpl-tags' }, [t.info.tone === 'dark' ? 'Dark' : 'Light', t.info.vibe[0].toUpperCase() + t.info.vibe.slice(1), t.info.style[0].toUpperCase() + t.info.style.slice(1)].map((x) => h('i', null, x)))));
     }
