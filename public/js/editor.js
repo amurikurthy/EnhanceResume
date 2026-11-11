@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { h, toast, modal, confirmDlg, thumb, downloadBlob, photoDataUrl, logoDataUrl } from './ui.js';
+import { h, toast, modal, confirmDlg, thumb, downloadBlob, photoDataUrl, logoDataUrl, ctxMenu, closeCtx } from './ui.js';
 import { topbar } from './dashboard.js';
 
 const T = window.ERT, R = window.ERR;
@@ -244,9 +244,10 @@ export async function mountEditor(root, id) {
     softPanel();
   }
   function softPanel() { if (tab === 'content' && !panelBody.contains(document.activeElement)) drawPanel(); }
+  let quiet = false; // true while an action came from the sidebar, so focus stays there
   function focusField(id) {
     const el = content.querySelector(`[data-f="${id}"]`);
-    if (!el) return;
+    if (!el || quiet) return;
     el.focus({ preventScroll: true });
     const r = document.createRange(); r.selectNodeContents(el.dataset.m === 'list' && el.lastElementChild ? el.lastElementChild : el); r.collapse(false);
     const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
@@ -628,7 +629,7 @@ export async function mountEditor(root, id) {
       input('Description (supports **bold**, *italic*, [link](url), "- " bullets)', () => it.text, (v) => { it.text = v; }, { area: true, rows: 2, max: 3000 }),
       h('div', { class: 'f-lbl' }, 'Bullet points'), bulletsEditor(it));
     const isCol = collapsed.has(it.id);
-    const row = h('div', { class: 'card entry' + (isCol ? ' folded' : '') },
+    const row = h('div', { class: 'card entry' + (isCol ? ' folded' : ''), 'data-iid': it.id },
       h('div', { class: 'card-h' }, grip(), h('button', { class: 'fold', onclick: () => { row.classList.toggle('folded'); row.classList.contains('folded') ? collapsed.add(it.id) : collapsed.delete(it.id); } }, '▾'), name,
         h('button', { class: 'icon-btn', title: 'Duplicate', onclick: () => { arr.splice(i + 1, 0, Object.assign(T.clone(it), { id: T.uid() })); redraw(); touch(); } }, '⧉'),
         xBtn(() => { arr.splice(i, 1); redraw(); touch(); }, 'Delete entry')), body);
@@ -644,7 +645,7 @@ export async function mountEditor(root, id) {
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); g.tags.splice(j + 1, 0, ''); rd(); touch(); tags.children[j + 1].querySelector('input').focus(); } if (e.key === 'Backspace' && !el.value && g.tags.length > 1) { e.preventDefault(); g.tags.splice(j, 1); rd(); touch(); const p = tags.children[Math.max(0, j - 1)]; if (p) p.querySelector('input').focus(); } });
       return h('span', { class: 'tag', title: 'Drag to reorder' }, el, h('button', { class: 'tx', type: 'button', onclick: () => { g.tags.splice(j, 1); rd(); touch(); } }, '×'));
     }, { group: 'tags', handle: '.tag' , filter: 'input' , preventOnFilter: false });
-    return h('div', { class: 'card group' },
+    return h('div', { class: 'card group', 'data-iid': g.id },
       h('div', { class: 'card-h static' }, grip(), h('input', { class: 'bare', type: 'text', value: g.name, placeholder: 'Group name', maxlength: 80, oninput: (e) => { g.name = e.target.value; touch(); } }),
         xBtn(() => { arr.splice(i, 1); redraw(); touch(); }, 'Delete group')),
       h('div', { class: 'card-body' }, tags, h('button', { class: 'btn small', onclick: () => { g.tags.push(''); tags._redraw(); touch(); tags.lastChild.querySelector('input').focus(); } }, '+ Item')));
@@ -867,7 +868,7 @@ export async function mountEditor(root, id) {
     const headerInMain = two && s.header.in === 'main';
     const lockBox = (label, hgt) => h('div', { class: 'ar-box locked', style: { height: Math.max(30, hgt * k) + 'px' } }, h('span', { html: SVG(ICO.lock) }), label);
     const box = (sec) => h('div', { class: 'ar-box', 'data-sid': sec.id }, h('span', { class: 'ar-grip' }, '⋮⋮'), sec.title || T.SECTION_TYPES[sec.type].label);
-    const zone = (col, w) => h('div', { class: 'ar-zone', 'data-col': col, style: { width: w * MM * k + 'px' } });
+    const zone = (col, w) => h('div', { class: 'ar-zone' + (col === 'side' && two && s.sidebarFilled ? ' filled' : ''), 'data-col': col, style: { width: w * MM * k + 'px' } });
     const zones = [], info = h('div', { class: 'ar-info' }), bands = h('div', { class: 'ar-lines' });
     const pageEl = h('div', { class: 'ar-page', style: { width: D + 'px' } });
     const topBox = !headerInMain ? lockBox('Header', geo.header) : null;
@@ -883,7 +884,7 @@ export async function mountEditor(root, id) {
       const sideZ = zone('side', sideW); zones.push(sideZ);
       if (headerInMain && geo.sideTop) { sideLock = lockBox('Photo & contact', geo.sideTop); sideZ.append(sideLock); }
       doc.sections.filter((x) => x.column === 'side').forEach((x) => sideZ.append(box(x)));
-      cols.append(sideZ);
+      if (s.layout === 'side-left') cols.prepend(sideZ); else cols.append(sideZ); // same side as on the real page
     }
     pageEl.append(cols, bands);
 
@@ -1012,17 +1013,31 @@ export async function mountEditor(root, id) {
     while (saving) await new Promise((r) => setTimeout(r, 40));
     try { await api.post(`/api/resumes/${id}/revisions`, { label }); toast('Version saved'); loadRevisions(); } catch (e) { toast(e.message, 'err'); }
   }
+  /* preview an older state on the page without touching the current resume; restoring is an explicit, confirmed action */
+  function showPreview(pdoc, key, title, sub, onRestore) {
+    previewDoc = pdoc; previewRev = key;
+    banner.replaceChildren(h('div', { class: 'pb-t' }, h('b', null, title), h('small', null, sub)),
+      h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: onRestore }, 'Restore this version')));
+    stage.classList.add('previewing'); panelEl.classList.add('locked');
+    hideFloats(); paintPreview(); drawHistory();
+    stage.scrollTo({ top: 0 });
+  }
   async function previewRevision(rev) {
     try {
       const r = await api.get(`/api/resumes/${id}/revisions/${rev.id}`);
-      previewDoc = T.normalizeDoc(r.data); previewRev = rev;
-      const changes = describe(JSON.stringify(previewDoc), JSON.stringify(doc));
-      banner.replaceChildren(h('div', { class: 'pb-t' }, h('b', null, `Previewing ${rev.label || 'restore point'}`), h('small', null, `${full(rev.created_at)} · to get back to now: ${brief(changes, 3)}`)),
-        h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: () => restoreRevision(rev) }, 'Restore this version')));
-      stage.classList.add('previewing'); panelEl.classList.add('locked');
-      hideFloats(); paintPreview(); drawHistory();
-      stage.scrollTo({ top: 0 });
+      const pd = T.normalizeDoc(r.data), changes = describe(JSON.stringify(pd), JSON.stringify(doc));
+      showPreview(pd, { kind: 'rev', id: rev.id }, `Previewing ${rev.auto ? (rev.label || 'an automatic restore point') : rev.label}`,
+        `${full(rev.created_at)} · your current version is unchanged. To get back to now: ${brief(changes, 3)}`, () => restoreRevision(rev));
     } catch (e) { toast(e.message, 'err'); }
+  }
+  function previewStep(i) {
+    const pd = T.normalizeDoc(JSON.parse(hist[i])), changes = describe(hist[i], JSON.stringify(doc));
+    const label = i === 0 ? 'how this resume looked when you opened it' : (histDesc[i] || describe(hist[i - 1], hist[i])).join(' · ') || 'an earlier edit';
+    showPreview(pd, { kind: 'step', i }, `Previewing: ${label}`, `${full(histTimes[i])} · your current version is unchanged. To get back to now: ${brief(changes, 3)}`, () => restoreStep(i));
+  }
+  async function restoreStep(i) {
+    if (!(await confirmDlg('Restore this version', 'Your resume goes back to this earlier state. You can still undo or redo afterwards.', 'Restore'))) return;
+    exitPreview(); jumpTo(i); drawHistory(); toast('Restored');
   }
   function exitPreview() {
     if (!previewDoc) return;
@@ -1044,21 +1059,21 @@ export async function mountEditor(root, id) {
     const nameIn = h('input', { type: 'text', placeholder: 'Name this version…', maxlength: 80 });
     const doSave = () => { const v = nameIn.value.trim(); nameIn.value = ''; saveVersion(v || 'Saved version'); };
     nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSave(); });
-    const revRow = (rev) => h('li', { class: 'rev' + (previewRev && previewRev.id === rev.id ? ' on' : ''), onclick: () => previewRevision(rev) },
+    const revRow = (rev) => h('li', { class: 'rev' + (previewRev && previewRev.kind === 'rev' && previewRev.id === rev.id ? ' on' : ''), onclick: () => previewRevision(rev) },
       h('span', { class: 'dot' + (rev.auto ? ' auto' : '') }),
       h('div', { class: 'rev-t' }, h('b', null, rev.auto ? (rev.label || 'Automatic restore point') : rev.label), h('small', { title: full(rev.created_at) }, ago(rev.created_at))),
       h('div', { class: 'rev-a' },
         h('button', { class: 'icon-btn', title: 'Restore', onclick: (e) => { e.stopPropagation(); restoreRevision(rev); }, html: SVG(ICO.undo) }),
         h('button', { class: 'icon-btn', title: 'Name this version', onclick: async (e) => { e.stopPropagation(); const n = await askName('Name this version', rev.auto ? '' : rev.label); if (n) { await api.patch(`/api/resumes/${id}/revisions/${rev.id}`, { label: n }); loadRevisions(); } }, html: SVG(ICO.pen || '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>') }),
-        h('button', { class: 'icon-btn x', title: 'Delete', onclick: async (e) => { e.stopPropagation(); if (await confirmDlg('Delete version', 'Delete this saved version?')) { await api.del(`/api/resumes/${id}/revisions/${rev.id}`); if (previewRev && previewRev.id === rev.id) exitPreview(); loadRevisions(); } }, html: SVG(ICO.trash) })));
+        h('button', { class: 'icon-btn x', title: 'Delete', onclick: async (e) => { e.stopPropagation(); if (await confirmDlg('Delete version', 'Delete this saved version?')) { await api.del(`/api/resumes/${id}/revisions/${rev.id}`); if (previewRev && previewRev.kind === 'rev' && previewRev.id === rev.id) exitPreview(); loadRevisions(); } }, html: SVG(ICO.trash) })));
     // this session: undo steps, newest first
     const steps = [];
     for (let i = hist.length - 1; i >= 1; i--) {
       if (!histDesc[i]) histDesc[i] = describe(hist[i - 1], hist[i]);
-      steps.push(h('li', { class: 'rev step' + (i === hi && !previewDoc ? ' on' : ''), onclick: () => { exitPreview(); jumpTo(i); drawHistory(); } },
-        h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, brief(histDesc[i], 2)), h('small', { title: full(histTimes[i]) }, ago(histTimes[i])))));
+      steps.push(h('li', { class: 'rev step' + (previewRev && previewRev.kind === 'step' && previewRev.i === i ? ' on' : i === hi && !previewDoc ? ' now-step' : ''), onclick: () => previewStep(i) },
+        h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, brief(histDesc[i], 2)), h('small', { title: full(histTimes[i]) }, ago(histTimes[i]) + (i === hi && !previewDoc ? ' · current' : '')))));
     }
-    steps.push(h('li', { class: 'rev step' + (hi === 0 && !previewDoc ? ' on' : ''), onclick: () => { exitPreview(); jumpTo(0); drawHistory(); } }, h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, 'Opened this resume'), h('small', null, ago(histTimes[0])))));
+    steps.push(h('li', { class: 'rev step' + (previewRev && previewRev.kind === 'step' && previewRev.i === 0 ? ' on' : hi === 0 && !previewDoc ? ' now-step' : ''), onclick: () => previewStep(0) }, h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, 'Opened this resume'), h('small', null, ago(histTimes[0]) + (hi === 0 && !previewDoc ? ' · current' : '')))));
     histBody.replaceChildren(...[
       h('div', { class: 'hist-save' }, nameIn, h('button', { class: 'btn primary small', onclick: doSave }, 'Save version')),
       h('p', { class: 'muted small' }, 'Versions are kept on the server. A restore point is also saved automatically after you pause editing.'),
@@ -1068,9 +1083,160 @@ export async function mountEditor(root, id) {
       h('h4', null, 'This session'), h('ul', { class: 'rev-list' }, steps)].flat().filter(Boolean));
   }
 
+
+  /* ---------------- right-click menus ---------------- */
+  const IC = { cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/>', copy: ICO.copy, paste: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+    bold: ICO.bold, italic: ICO.italic, link: ICO.link, unlink: ICO.unlink, plus: ICO.plus, up: ICO.up, down: ICO.down, trash: ICO.trash, star: ICO.star, camera: ICO.camera, sliders: ICO.sliders, undo: ICO.undo, redo: ICO.redo, grid: ICO.grid, cols: ICO.cols,
+    clear: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/><path d="M3 3l18 18"/>', select: '<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' };
+  const NEW_LABEL = { entries: 'entry', skills: 'group', list: 'item', levels: 'language' };
+  const idxOf = (sec, it) => sec.items.indexOf(it);
+
+  function duplicateSection(sec) {
+    const c = T.clone(sec); c.id = T.uid(); c.items.forEach((i) => { i.id = T.uid(); });
+    doc.sections.splice(doc.sections.indexOf(sec) + 1, 0, c); commit();
+  }
+  async function deleteSection(sec) {
+    if (!(await confirmDlg('Delete section', `Delete the “${sec.title}” section?`))) return;
+    doc.sections.splice(doc.sections.indexOf(sec), 1); commit(); hideFloats();
+  }
+  function addItemAfter(sec, it) { const n = T.newItem(sec.type); sec.items.splice(idxOf(sec, it) + 1, 0, n); commit(firstField(sec, n)); }
+  function duplicateItem(sec, it) { const c = Object.assign(T.clone(it), { id: T.uid() }); sec.items.splice(idxOf(sec, it) + 1, 0, c); commit(firstField(sec, c)); }
+  function deleteItem(sec, it) { sec.items.splice(idxOf(sec, it), 1); commit(); hideFloats(); }
+  function focusBullet(sec, it, i) {
+    const ul = content.querySelector(`[data-f="BL:${sec.id}:${it.id}"]`), li = ul && ul.children[Math.min(i, ul.children.length - 1)];
+    if (!li) return;
+    ul.focus({ preventScroll: true });
+    const r = document.createRange(); r.selectNodeContents(li); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
+  async function pasteInto(f) {
+    try {
+      const t = await navigator.clipboard.readText();
+      f.focus({ preventScroll: true }); pastePlain(f, t);
+    } catch { toast('Your browser blocked clipboard access: press Ctrl+V instead'); }
+  }
+  function pastePlain(f, t) {
+    if (f.dataset.m === 'list') {
+      t.split(/\r?\n/).map((x) => x.replace(/^\s*[-•*]\s+/, '')).filter((x, i, a) => x || a.length === 1).forEach((line, i) => { if (i) document.execCommand('insertParagraph'); document.execCommand('insertText', false, line); });
+      return;
+    }
+    if (f.dataset.m !== 'multi') t = t.replace(/\s*\n\s*/g, ' ');
+    document.execCommand('insertText', false, t);
+  }
+  /* run a command against the field/selection that was under the pointer when the menu opened */
+  const withField = (f, range, fn) => { f.focus({ preventScroll: true }); if (range) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); } fn(); };
+
+  function pageMenu(e) {
+    const t = e.target, f = fieldOf(t);
+    const secEl = t.closest('[data-sid]'), rowEl = t.closest('[data-iid]');
+    const sec = secEl && doc.sections.find((x) => x.id === secEl.dataset.sid), it = sec && rowEl && sec.items.find((x) => x.id === rowEl.dataset.iid);
+    const kind = sec && kindOf(sec), two = S().layout !== 'single';
+    const sel = getSelection(), hasSel = !!(f && sel && sel.rangeCount && !sel.isCollapsed && f.contains(sel.anchorNode));
+    const range = hasSel ? sel.getRangeAt(0).cloneRange() : null;
+    const items = [];
+    if (f) {
+      if (hasSel) items.push({ label: 'Cut', icon: IC.cut, kbd: 'Ctrl+X', run: () => withField(f, range, () => document.execCommand('cut')) }, { label: 'Copy', icon: IC.copy, kbd: 'Ctrl+C', run: () => withField(f, range, () => document.execCommand('copy')) });
+      items.push({ label: 'Paste', icon: IC.paste, kbd: 'Ctrl+V', run: () => { if (range) { f.focus({ preventScroll: true }); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(range); } pasteInto(f); } });
+      if (hasSel && f.dataset.m !== 'line') {
+        const boldByDefault = Number(getComputedStyle(f).fontWeight) >= 600;
+        items.push('-', ...(boldByDefault ? [] : [{ label: 'Bold', icon: IC.bold, kbd: 'Ctrl+B', run: () => withField(f, range, () => execFmt('bold')) }]),
+          { label: 'Italic', icon: IC.italic, kbd: 'Ctrl+I', run: () => withField(f, range, () => execFmt('italic')) },
+          { label: 'Add link…', icon: IC.link, run: () => withField(f, range, () => startLink(f)) },
+          { label: 'Remove link', icon: IC.unlink, run: () => withField(f, range, () => execFmt('unlink')) },
+          { label: 'Clear formatting', icon: IC.clear, run: () => withField(f, range, () => execFmt('removeFormat')) });
+      }
+      items.push({ label: 'Select all', icon: IC.select, kbd: 'Ctrl+A', run: () => { f.focus({ preventScroll: true }); const r = document.createRange(); r.selectNodeContents(f); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } });
+      items.push('-');
+    }
+    // bullets
+    const li = t.closest('li'), ul = li && li.closest('ul[data-f^="BL:"]');
+    if (ul && it) {
+      const i = Array.from(ul.children).indexOf(li);
+      items.push({ header: 'Bullet' },
+        { label: 'Add bullet below', icon: IC.plus, run: () => { it.bullets.splice(i + 1, 0, ''); commit(); focusBullet(sec, it, i + 1); } },
+        { label: 'Move bullet up', icon: IC.up, disabled: i === 0, run: () => { const [b] = it.bullets.splice(i, 1); it.bullets.splice(i - 1, 0, b); commit(); focusBullet(sec, it, i - 1); } },
+        { label: 'Move bullet down', icon: IC.down, disabled: i >= it.bullets.length - 1, run: () => { const [b] = it.bullets.splice(i, 1); it.bullets.splice(i + 1, 0, b); commit(); focusBullet(sec, it, i + 1); } },
+        { label: 'Delete bullet', icon: IC.trash, danger: true, run: () => { it.bullets.splice(i, 1); if (!it.bullets.length) it.bullets = ['']; commit(); focusBullet(sec, it, Math.max(0, i - 1)); } }, '-');
+    }
+    // skills
+    const tag = t.closest('.rz-tag[data-f^="T:"]');
+    if (tag && it) {
+      const j = Number(tag.dataset.f.split(':')[3]);
+      items.push({ header: 'Skill' }, { label: 'Add skill after', icon: IC.plus, run: () => { it.tags.splice(j + 1, 0, ''); commit(`T:${sec.id}:${it.id}:${j + 1}`); } },
+        { label: 'Delete skill', icon: IC.trash, danger: true, run: () => { it.tags.splice(j, 1); if (!it.tags.length) it.tags = ['']; commit(); } }, '-');
+    }
+    // the entry / group / list item under the pointer
+    if (sec && it && NEW_LABEL[kind]) {
+      const L = NEW_LABEL[kind], i = idxOf(sec, it);
+      items.push({ header: L[0].toUpperCase() + L.slice(1) },
+        { label: `Add ${L} below`, icon: IC.plus, run: () => addItemAfter(sec, it) },
+        kind === 'entries' ? { label: 'Add bullet point', icon: IC.plus, run: () => { it.bullets.push(''); commit(); focusBullet(sec, it, it.bullets.length - 1); } } : null,
+        kind === 'skills' ? { label: 'Add skill', icon: IC.plus, run: () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); } } : null,
+        { label: `Duplicate ${L}`, icon: IC.copy, run: () => duplicateItem(sec, it) },
+        { label: 'Move up', icon: IC.up, disabled: i === 0, run: () => moveItem(sec, it, -1) },
+        { label: 'Move down', icon: IC.down, disabled: i >= sec.items.length - 1, run: () => moveItem(sec, it, 1) },
+        kind === 'entries' || kind === 'list' ? { label: 'Choose icon…', icon: IC.star, run: () => iconPicker(it.icon, (v) => { it.icon = v; commit(); }, rowEl) } : null,
+        { label: `Delete ${L}`, icon: IC.trash, danger: true, run: () => deleteItem(sec, it) }, '-');
+    }
+    // the section
+    if (sec) {
+      items.push({ header: `Section · ${sec.title || T.SECTION_TYPES[sec.type].label}` },
+        { label: 'Move section up', icon: IC.up, run: () => moveSection(sec, -1) }, { label: 'Move section down', icon: IC.down, run: () => moveSection(sec, 1) },
+        two ? { label: sec.column === 'side' ? 'Move to main column' : 'Move to sidebar', icon: IC.cols, run: () => { sec.column = sec.column === 'side' ? 'main' : 'side'; commit(); } } : null,
+        { label: 'Section icon…', icon: IC.star, run: () => iconPicker(sec.icon, (v) => { sec.icon = v; commit(); }, secEl.querySelector('.rz-h')) },
+        { label: 'Duplicate section', icon: IC.copy, run: () => duplicateSection(sec) },
+        { label: 'Edit in sidebar', icon: IC.sliders, run: () => gotoPanel(sec.id) },
+        { label: 'Delete section', icon: IC.trash, danger: true, run: () => deleteSection(sec) }, '-');
+    } else if (t.closest('.rz-header, .rz-side-top, img.rz-photo')) {
+      items.push({ header: 'Header' }, { label: doc.header.photo ? 'Change photo…' : 'Upload photo…', icon: IC.camera, run: uploadPhoto },
+        doc.header.photo ? { label: 'Remove photo', icon: IC.trash, danger: true, run: () => { doc.header.photo = ''; commit(); } } : null,
+        { label: 'Edit header in sidebar', icon: IC.sliders, run: () => gotoPanel(null) }, '-');
+    }
+    // the page
+    items.push({ label: 'Add a section…', icon: IC.plus, run: openGallery }, { label: 'Arrange sections…', icon: IC.grid, run: openArrange },
+      { label: 'Undo', icon: IC.undo, kbd: 'Ctrl+Z', disabled: hi === 0, run: undo }, { label: 'Redo', icon: IC.redo, kbd: 'Ctrl+Shift+Z', disabled: hi >= hist.length - 1, run: redo },
+      { label: 'Version history', icon: IC.clock, run: () => toggleHistory(true) });
+    return items;
+  }
+  content.addEventListener('contextmenu', (e) => {
+    if (previewDoc || e.shiftKey) return; // Shift + right-click keeps the browser's own menu (spell check, etc.)
+    e.preventDefault();
+    ctxMenu(pageMenu(e), e.clientX, e.clientY);
+  });
+
+  /* sidebar cards: right-click a card header for quick actions (text boxes keep the browser menu) */
+  const panelAct = (fn) => () => { quiet = true; try { fn(); } finally { quiet = false; } };
+  function onPanelContext(e) {
+    if (previewDoc) return;
+    const head = e.target.closest('.card-h');
+    if (!head || e.target.closest('input, textarea, select')) return;
+    const card = head.closest('.card'), secCard = card.closest('.card.sec');
+    const sec = secCard && doc.sections.find((x) => x.id === secCard.dataset.sid);
+    if (!sec) return;
+    e.preventDefault();
+    const two = S().layout !== 'single', items = [];
+    if (card === secCard) {
+      items.push({ header: sec.title || 'Section' },
+        { label: secCard.classList.contains('folded') ? 'Expand' : 'Collapse', run: () => { secCard.classList.toggle('folded'); secCard.classList.contains('folded') ? collapsed.add(sec.id) : collapsed.delete(sec.id); } },
+        { label: 'Move up', icon: IC.up, run: panelAct(() => moveSection(sec, -1)) }, { label: 'Move down', icon: IC.down, run: panelAct(() => moveSection(sec, 1)) },
+        two ? { label: sec.column === 'side' ? 'Move to main column' : 'Move to sidebar', icon: IC.cols, run: panelAct(() => { sec.column = sec.column === 'side' ? 'main' : 'side'; commit(); }) } : null,
+        { label: 'Duplicate section', icon: IC.copy, run: panelAct(() => duplicateSection(sec)) },
+        { label: 'Delete section', icon: IC.trash, danger: true, run: panelAct(() => deleteSection(sec)) });
+    } else if (card.dataset.iid) {
+      const it = sec.items.find((x) => x.id === card.dataset.iid), i = idxOf(sec, it), L = NEW_LABEL[kindOf(sec)] || 'item';
+      if (!it) return;
+      items.push({ header: it.title || it.name || it.org || 'Entry' },
+        { label: 'Move up', icon: IC.up, disabled: i === 0, run: panelAct(() => moveItem(sec, it, -1)) }, { label: 'Move down', icon: IC.down, disabled: i >= sec.items.length - 1, run: panelAct(() => moveItem(sec, it, 1)) },
+        { label: `Add ${L} below`, icon: IC.plus, run: panelAct(() => addItemAfter(sec, it)) },
+        { label: `Duplicate ${L}`, icon: IC.copy, run: panelAct(() => duplicateItem(sec, it)) },
+        { label: `Delete ${L}`, icon: IC.trash, danger: true, run: panelAct(() => deleteItem(sec, it)) });
+    }
+    ctxMenu(items, e.clientX, e.clientY);
+  }
+
   /* ---------------- shell ---------------- */
   const panelBody = h('div', { class: 'panel-body' });
   const tabs = h('div', { class: 'tabs' });
+  panelBody.addEventListener('contextmenu', onPanelContext);
   const panelEl = h('aside', { class: 'panel' }, tabs, panelBody);
   const panelSplit = h('div', { class: 'splitter', title: 'Drag to resize · double-click to reset' });
   let lastTab = null;
@@ -1134,7 +1300,7 @@ export async function mountEditor(root, id) {
   requestAnimationFrame(paintPreview);
 
   return async () => {
-    document.removeEventListener('selectionchange', onSelection); closePicker();
+    document.removeEventListener('selectionchange', onSelection); closePicker(); closeCtx();
     window.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onUnload);
     ro.disconnect(); dirty = dirty || false;
     clearTimeout(timer);

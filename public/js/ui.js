@@ -106,3 +106,44 @@ export function themeButton() {
   draw();
   return btn;
 }
+
+/* ---------- context menu ---------- */
+let ctxEl = null, ctxCleanup = null;
+export function closeCtx() {
+  if (ctxEl) { ctxEl.remove(); ctxEl = null; }
+  if (ctxCleanup) { ctxCleanup(); ctxCleanup = null; }
+}
+/* items: { label, run, icon (svg inner), kbd, disabled, danger } | { header } | '-' */
+export function ctxMenu(items, x, y) {
+  closeCtx();
+  const list = items.filter(Boolean).filter((it, i, a) => !(it === '-' && (i === 0 || a[i - 1] === '-' || i === a.length - 1)));
+  const menu = h('div', { class: 'ctx-menu', role: 'menu' });
+  list.forEach((it) => {
+    if (it === '-') menu.append(h('div', { class: 'ctx-sep', role: 'separator' }));
+    else if (it.header) menu.append(h('div', { class: 'ctx-h' }, it.header));
+    else menu.append(h('button', { type: 'button', role: 'menuitem', class: 'ctx-item' + (it.danger ? ' danger' : ''), disabled: !!it.disabled,
+      onmousedown: (e) => e.preventDefault(), // keep the text selection in the page
+      onclick: () => { closeCtx(); if (it.run) it.run(); } },
+    h('span', { class: 'ctx-ic', html: it.icon ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${it.icon}</svg>` : '' }),
+    h('span', { class: 'ctx-l' }, it.label), it.kbd ? h('kbd', null, it.kbd) : null));
+  });
+  if (!menu.children.length) return;
+  document.body.append(menu); ctxEl = menu;
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.max(6, Math.min(x, innerWidth - r.width - 6)) + 'px';
+  menu.style.top = Math.max(6, Math.min(y, innerHeight - r.height - 6)) + 'px';
+  const buttons = () => Array.from(menu.querySelectorAll('.ctx-item:not(:disabled)'));
+  const onDown = (e) => { if (!menu.contains(e.target)) closeCtx(); };
+  const onKey = (e) => {
+    const b = buttons(), i = b.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); closeCtx(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); (b[i + 1] || b[0]).focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); (b[i - 1] || b[b.length - 1]).focus(); }
+  };
+  document.addEventListener('mousedown', onDown, true);
+  document.addEventListener('keydown', onKey, true);
+  const opened = Date.now();
+  const onScroll = () => { if (Date.now() - opened > 250) closeCtx(); }; // ignore the scroll that opening the menu can cause
+  window.addEventListener('blur', closeCtx); window.addEventListener('resize', closeCtx); document.addEventListener('scroll', onScroll, true);
+  ctxCleanup = () => { document.removeEventListener('mousedown', onDown, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('blur', closeCtx); window.removeEventListener('resize', closeCtx); document.removeEventListener('scroll', onScroll, true); };
+}
