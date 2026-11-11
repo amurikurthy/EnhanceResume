@@ -102,4 +102,4 @@ async function renderPdf(doc) {
 
 process.on('exit', () => { if (browserP) browserP.then((b) => b.close()).catch(() => {}); });
 
-module.exports = { renderPdf, buildHtml };
+module.exports = { renderPdf, buildHtml, getBrowser };

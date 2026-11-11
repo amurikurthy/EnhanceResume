@@ -130,8 +130,13 @@
 .sk-fill.sk-chips .rz-tag, .sk-fill.sk-outline .rz-tag { flex: 1 1 auto; text-align: center; }
 
 /* mandala halo around the header photo (henna accent) */
-.rz-halo { position: relative; flex: none; width: var(--photo); height: var(--photo); display: block; color: var(--accent); margin: 0 calc(var(--photo) * 0.2); }
+.rz-halo { position: relative; flex: none; width: var(--photo); height: var(--photo); display: block; color: var(--accent); margin: calc(var(--photo) * 0.27); }
 .hd-banner .rz-halo { color: var(--header-text); }
 .rz-halo-art { position: absolute; left: 50%; top: 50%; width: 200%; height: 200%; transform: translate(-50%, -50%); overflow: visible; pointer-events: none; }
 .rz-halo > .rz-photo { position: relative; z-index: 1; }
 .rz-header:has(.rz-halo) { margin-bottom: calc(var(--sgap) + var(--photo) * 0.14); }
+
+/* the halo is part of the photo's own box: it reserves the room it needs (so margins and neighbours can never clip or cover it) */
+.rz-halo.hs { margin: calc(var(--photo) * 0.42); }
+.rz-hd-text { position: relative; z-index: 2; }
+.rz-header:has(.rz-halo) { margin-bottom: var(--sgap); }

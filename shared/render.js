@@ -434,7 +434,7 @@
     const s = doc.settings.header;
     if (s.photoShape === 'none' || !doc.header.photo) return '';
     const img = `<img class="rz-photo ps-${s.photoShape}" src="${esc(doc.header.photo)}" alt="" data-edit="header">`;
-    return halo ? `<span class="rz-halo">${haloSvg(Math.min(1, doc.settings.pattern.opacity * 1.7 + 0.05).toFixed(2), s.photoShape)}${img}</span>` : img;
+    return halo ? `<span class="rz-halo ${s.photoShape === 'circle' ? 'hc' : 'hs'}">${haloSvg(Math.min(1, doc.settings.pattern.opacity * 1.7 + 0.05).toFixed(2), s.photoShape)}${img}</span>` : img;
   }
   function headerHtml(doc, li, mode) {
     const h = doc.header, s = doc.settings;
