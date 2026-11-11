@@ -48,7 +48,9 @@ export function downloadBlob(blob, name) {
 
 /* A4 page sheet used by preview + thumbnails */
 export function sheetHtml(doc) {
-  const T = window.ERT, R = window.ERR, s = doc.settings, m = s.margins;
+  const T = window.ERT, R = window.ERR;
+  doc = T.resolveProfile(doc);
+  const s = doc.settings, m = s.margins;
   const [pw, ph] = T.PAGE_MM[s.pageSize];
   return `<div class="sheet" style="width:${pw}mm;min-height:${ph}mm;padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm"><div class="rz-bg" style="${R.esc(R.pageBg(doc))}"></div>${R.render(doc)}</div>`;
 }

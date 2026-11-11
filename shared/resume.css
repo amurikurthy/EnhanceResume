@@ -7,7 +7,7 @@
 .rz .ic { width: 1.05em; height: 1.05em; flex: none; }
 
 /* columns */
-.rz-cols { display: flex; gap: var(--gap); align-items: flex-start; }
+.rz-cols { display: flex; gap: var(--gap); align-items: flex-start; margin-left: calc(-1 * var(--shift-l, 0mm)); margin-right: calc(-1 * var(--shift-r, 0mm)); }
 .rz-main { flex: 0 0 var(--main-w); min-width: 0; }
 .rz-side { flex: 0 0 var(--side-w); min-width: 0; }
 .lay-single .rz-main { flex: 1 1 100%; }

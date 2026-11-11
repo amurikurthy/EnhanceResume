@@ -2,6 +2,8 @@ import * as api from './api.js';
 import { h, toast, modal, confirmDlg, thumb, downloadBlob, photoDataUrl, logoDataUrl, ctxMenu, closeCtx } from './ui.js';
 import { topbar } from './dashboard.js';
 import { ensureIconsFor, loadLucide, loadBrands } from './icons.js';
+import { state } from './app.js';
+import { openProfile } from './profile.js';
 
 const T = window.ERT, R = window.ERR;
 const MM = 96 / 25.4;
@@ -166,7 +168,7 @@ export async function mountEditor(root, id) {
 
   function paintPreview() {
     hideFloats();
-    const d = curDoc(), m = d.settings.margins, [pw] = T.PAGE_MM[d.settings.pageSize], edit = !previewDoc;
+    const d = T.resolveProfile(curDoc()), m = d.settings.margins, [pw] = T.PAGE_MM[d.settings.pageSize], edit = !previewDoc;
     sheet.style.width = pw + 'mm';
     sheet.style.padding = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
     sheet.classList.toggle('sheet-edit', edit);
@@ -261,6 +263,8 @@ export async function mountEditor(root, id) {
   }
   const zoomLabel = h('span', { class: 'zoom-l' });
   const setZoom = (z) => { zoomMode = 'manual'; zoom = Math.min(2, Math.max(0.3, z)); applyZoom(); hideFloats(); };
+  const onProfile = () => { paintPreview(); if (tab === 'content') drawPanel(); };
+  window.addEventListener('er-profile', onProfile);
   const ro = new ResizeObserver(() => { if (zoomMode === 'fit') applyZoom(); });
   ro.observe(stage);
 
@@ -368,7 +372,7 @@ export async function mountEditor(root, id) {
   function uploadPhoto() {
     const f = h('input', { type: 'file', accept: 'image/*', onchange: async () => {
       if (!f.files[0]) return;
-      try { doc.header.photo = await photoDataUrl(f.files[0]); if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; commit(); } catch (ex) { toast(ex.message, 'err'); }
+      try { doc.header.photo = await photoDataUrl(f.files[0]); doc.header.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; commit(); } catch (ex) { toast(ex.message, 'err'); }
     } });
     f.click();
   }
@@ -595,11 +599,24 @@ export async function mountEditor(root, id) {
   }
 
   /* ---------------- content: header card ---------------- */
+  /* photo source: the account's profile photo (default, always up to date), a custom upload for this resume, or none */
+  function photoBlock(hd, photoIn) {
+    const eff = T.resolveProfile(doc).header.photo, mode = hd.photoMode;
+    const setMode = (m) => { hd.photoMode = m; if (m !== 'none' && S().header.photoShape === 'none') S().header.photoShape = 'circle'; touch(); drawPanel(); };
+    const seg2 = h('div', { class: 'seg' }, [['profile', 'My profile photo'], ['custom', 'Custom'], ['none', 'No photo']].map(([m, l]) => h('button', { type: 'button', class: mode === m ? 'on' : '', onclick: () => setMode(m) }, l)));
+    const detail = mode === 'profile'
+      ? (state.user.photo ? h('small', { class: 'muted' }, 'Using the photo from your profile. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openProfile(); } }, 'Change it'))
+        : h('small', { class: 'muted' }, 'You have no profile photo yet. ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openProfile(); } }, 'Add one')))
+      : mode === 'custom' ? h('div', null, h('button', { type: 'button', class: 'btn small', onclick: () => photoIn.click() }, hd.photo ? 'Change photo' : 'Upload a photo'), hd.photo ? h('small', { class: 'muted' }, '  only used on this resume') : null)
+        : h('small', { class: 'muted' }, 'This resume has no photo.');
+    return h('div', { class: 'photo-row' }, eff ? h('img', { class: 'photo-prev', src: eff, alt: '' }) : h('div', { class: 'photo-prev empty' }, '📷'), h('div', { class: 'stack' }, seg2, detail), photoIn);
+  }
+
   function headerCard() {
     const hd = doc.header;
     const photoIn = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onchange: async (e) => {
       const f = e.target.files[0]; if (!f) return;
-      try { hd.photo = await photoDataUrl(f); if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; touch(); drawPanel(); } catch (ex) { toast(ex.message, 'err'); }
+      try { hd.photo = await photoDataUrl(f); hd.photoMode = 'custom'; if (S().header.photoShape === 'none') S().header.photoShape = 'circle'; touch(); drawPanel(); } catch (ex) { toast(ex.message, 'err'); }
     } });
     const contacts = h('div', { class: 'rows' });
     sortList(contacts, hd.contacts, (i, redraw) => {
@@ -616,10 +633,7 @@ export async function mountEditor(root, id) {
         input('Full name', () => hd.name, (v) => { hd.name = v; }),
         input('Job title', () => hd.title, (v) => { hd.title = v; }),
         input('Tagline (optional)', () => hd.tagline, (v) => { hd.tagline = v; }),
-        h('div', { class: 'photo-row' },
-          hd.photo ? h('img', { class: 'photo-prev', src: hd.photo }) : h('div', { class: 'photo-prev empty' }, '📷'),
-          h('div', null, h('button', { class: 'btn small', onclick: () => photoIn.click() }, hd.photo ? 'Change photo' : 'Upload photo'),
-            hd.photo ? h('button', { class: 'btn small danger-t', onclick: () => { hd.photo = ''; touch(); drawPanel(); } }, 'Remove') : null), photoIn),
+        photoBlock(hd, photoIn),
         h('div', { class: 'f-lbl' }, 'Contact details'), contacts,
         h('button', { class: 'btn small', onclick: () => { if (hd.contacts.length < 10) { hd.contacts.push({ id: T.uid(), icon: 'link', text: '', link: '' }); contacts._redraw(); touch(); } } }, '+ Add contact')));
   }
@@ -820,7 +834,7 @@ export async function mountEditor(root, id) {
         select('Heading font', 'fontHeading', T.FONTS.map((f) => [f.name, f.name])), select('Body font', 'fontBody', T.FONTS.map((f) => [f.name, f.name])),
         range('Font size', 'fontSize', 7.5, 13, 0.1, 'pt'), range('Line height', 'lineHeight', 1.15, 1.9, 0.01)),
       group('Margins & spacing', true,
-        simpleRange('Page margins', () => Math.round((s.margins.top + s.margins.bottom + s.margins.left + s.margins.right) / 4), (v) => { s.margins.top = s.margins.bottom = v; s.margins.left = s.margins.right = Math.round(v * 1.1); }, 4, 30, 1, 'narrow', 'wide'),
+        simpleRange('Page margins', () => Math.round((s.margins.top + s.margins.bottom + s.margins.left + s.margins.right) / 4), (v) => { s.margins.top = s.margins.bottom = v; s.margins.left = s.margins.right = v; }, 4, 26, 1, 'narrow', 'wide'),
         simpleRange('Section spacing', () => s.sectionGap, (v) => { s.sectionGap = v; s.entryGap = Math.round(v * 0.5 * 2) / 2; }, 2, 12, 0.5, 'compact', 'more space'),
         remember('adv', h('details', { class: 'adv', open: openState.get('adv') === true }, h('summary', null, 'Fine-tune margins and spacing'),
         range('Top margin', 'margins.top', 0, 35, 1, 'mm'), range('Bottom margin', 'margins.bottom', 0, 35, 1, 'mm'),
@@ -898,9 +912,9 @@ export async function mountEditor(root, id) {
     hideFloats();
     const s = S(), g = pageGeom(), li = R.layoutInfo(doc), two = s.layout !== 'single';
     const geo = sectionGeoms();
-    const D = 400, k = D / (li.cw * MM);
+    const cwid = R.columnWidths(doc), mainW = cwid.mainW, sideW = cwid.sideW;
+    const D = 400, k = D / (two ? (mainW + sideW + s.columnGap) * MM : li.cw * MM);
     const sg = s.sectionGap * MM, colGap = s.columnGap * MM * k;
-    const mainW = two ? ((li.cw - s.columnGap) * s.columnRatio / 100) : li.cw, sideW = li.cw - s.columnGap - mainW;
     const headerInMain = two && s.header.in === 'main';
     const lockBox = (label, hgt) => h('div', { class: 'ar-box locked', style: { height: Math.max(30, hgt * k) + 'px' } }, h('span', { html: SVG(ICO.lock) }), label);
     const box = (sec) => h('div', { class: 'ar-box', 'data-sid': sec.id }, h('span', { class: 'ar-grip' }, '⋮⋮'), sec.title || T.SECTION_TYPES[sec.type].label);
@@ -997,7 +1011,7 @@ export async function mountEditor(root, id) {
   function describe(aJson, bJson) {
     const a = JSON.parse(aJson), b = JSON.parse(bJson), out = [];
     ['name', 'title', 'tagline'].forEach((k) => { if (a.header[k] !== b.header[k]) out.push(`Edited ${k}`); });
-    if (a.header.photo !== b.header.photo) out.push(b.header.photo ? 'Changed photo' : 'Removed photo');
+    if (a.header.photo !== b.header.photo || a.header.photoMode !== b.header.photoMode) out.push(b.header.photoMode === 'none' ? 'Removed photo' : 'Changed photo');
     if (JSON.stringify(a.header.contacts) !== JSON.stringify(b.header.contacts)) out.push('Edited contact details');
     const groups = new Set();
     Object.keys(b.settings).forEach((k) => { if (JSON.stringify(a.settings[k]) !== JSON.stringify(b.settings[k])) groups.add(SETTING_GROUP[k] || k); });
@@ -1225,8 +1239,9 @@ export async function mountEditor(root, id) {
         { label: 'Edit in sidebar', icon: IC.sliders, run: () => gotoPanel(sec.id) },
         { label: 'Delete section', icon: IC.trash, danger: true, run: () => deleteSection(sec) }, '-');
     } else if (t.closest('.rz-header, .rz-side-top, img.rz-photo')) {
-      items.push({ header: 'Header' }, { label: doc.header.photo ? 'Change photo…' : 'Upload photo…', icon: IC.camera, run: uploadPhoto },
-        doc.header.photo ? { label: 'Remove photo', icon: IC.trash, danger: true, run: () => { doc.header.photo = ''; commit(); } } : null,
+      items.push({ header: 'Header' }, { label: 'Upload a custom photo…', icon: IC.camera, run: uploadPhoto },
+        doc.header.photoMode !== 'profile' ? { label: 'Use my profile photo', icon: IC.camera, run: () => { doc.header.photoMode = 'profile'; commit(); } } : { label: 'Edit my profile photo…', icon: IC.camera, run: openProfile },
+        doc.header.photoMode !== 'none' ? { label: 'Hide photo', icon: IC.trash, danger: true, run: () => { doc.header.photoMode = 'none'; commit(); } } : null,
         { label: 'Edit header in sidebar', icon: IC.sliders, run: () => gotoPanel(null) }, '-');
     }
     // the page
@@ -1338,7 +1353,7 @@ export async function mountEditor(root, id) {
   requestAnimationFrame(paintPreview);
 
   return async () => {
-    document.removeEventListener('selectionchange', onSelection); closePicker(); closeCtx();
+    document.removeEventListener('selectionchange', onSelection); window.removeEventListener('er-profile', onProfile); closePicker(); closeCtx();
     window.removeEventListener('keydown', onKey); window.removeEventListener('beforeunload', onUnload);
     ro.disconnect(); dirty = dirty || false;
     clearTimeout(timer);

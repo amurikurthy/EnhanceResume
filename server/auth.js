@@ -48,13 +48,18 @@ function endSession(req, res) {
 function loadUser(req) {
   const token = parseCookies(req)[COOKIE];
   if (!token) return null;
-  const row = db.prepare(`SELECT u.id, u.email, u.name, u.is_admin, u.disabled, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(sha(token));
+  const row = db.prepare(`SELECT u.id, u.email, u.name, u.is_admin, u.disabled, u.photo, u.profile, u.pass_hash, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`).get(sha(token));
   if (!row || row.disabled) return null;
   if (row.expires_at < Date.now()) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha(token)); return null; }
-  return { id: row.id, email: row.email, name: row.name, isAdmin: !!row.is_admin };
+  return userOut(row);
 }
 
-function userOut(u) { return { id: u.id, email: u.email, name: u.name, isAdmin: !!(u.isAdmin ?? u.is_admin) }; }
+function userOut(u) {
+  let profile = {};
+  try { profile = typeof u.profile === 'string' ? JSON.parse(u.profile || '{}') : (u.profile || {}); } catch { /* keep empty */ }
+  return { id: u.id, email: u.email, name: u.name, isAdmin: !!(u.isAdmin ?? u.is_admin), photo: u.photo || '', profile, hasPassword: !!u.pass_hash && u.pass_hash !== '!' };
+}
+const currentTokenHash = (req) => { const t = parseCookies(req)[COOKIE]; return t ? sha(t) : null; };
 
 function requireAdmin(req, res, next) {
   if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Admin only' });
@@ -88,4 +93,4 @@ function rateLimit(key, max, windowMs) {
 
 setInterval(() => db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600 * 1000).unref();
 
-module.exports = { userOut, requireAdmin, sha, hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };
+module.exports = { currentTokenHash, userOut, requireAdmin, sha, hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };

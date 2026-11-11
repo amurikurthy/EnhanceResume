@@ -9,14 +9,14 @@ const app = document.getElementById('app');
 let cleanup = null;
 let user = null;
 
-export const state = { get user() { return user; }, set user(u) { user = u; }, registration: true, passwordLogin: true, oidc: null };
+export const state = { get user() { return user; }, set user(u) { user = u; window.ERT.setProfile(u); }, registration: true, passwordLogin: true, oidc: null };
 
 async function route() {
   if (cleanup) { try { await cleanup(); } catch (e) { console.error(e); } cleanup = null; }
   app.replaceChildren();
   if (!user) {
     const me = await api.get('/api/auth/me').catch(() => ({ user: null }));
-    user = me.user; state.registration = me.registration !== false; state.passwordLogin = me.passwordLogin !== false; state.oidc = me.oidc || null;
+    state.user = me.user; state.registration = me.registration !== false; state.passwordLogin = me.passwordLogin !== false; state.oidc = me.oidc || null;
   }
   const hash = location.hash || '#/';
   if (!user) {
@@ -38,7 +38,7 @@ async function route() {
 
 export async function logout() {
   await api.post('/api/auth/logout').catch(() => {});
-  user = null; location.hash = '#/login'; route();
+  state.user = null; location.hash = '#/login'; route();
 }
 
 window.addEventListener('hashchange', route);

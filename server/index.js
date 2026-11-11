@@ -41,7 +41,7 @@ app.post('/api/auth/register', (req, res) => {
   const info = db.prepare('INSERT INTO users (email, name, pass_hash, created_at, last_login) VALUES (?,?,?,?,?)').run(email.trim(), nm, A.hashPassword(password), Date.now(), Date.now());
   const id = Number(info.lastInsertRowid);
   A.startSession(req, res, id);
-  res.json({ user: { id, email: email.trim(), name: nm, isAdmin: false } });
+  res.json({ user: A.userOut(userRow(id)) });
 });
 
 app.post('/api/auth/login', (req, res) => {
@@ -90,6 +90,54 @@ function addRevision(resumeId, data, label, auto, at = Date.now()) {
 const revOut = (v) => ({ id: v.id, created_at: v.created_at, label: v.label, auto: !!v.auto });
 const ownRev = (req) => (own(req) ? db.prepare('SELECT * FROM revisions WHERE id = ? AND resume_id = ?').get(Number(req.params.rid), req.params.id) : null);
 
+
+/* ---------- profile (account-level photo and details, used to start new resumes) ---------- */
+const PROFILE_FIELDS = ['headline', 'phone', 'location', 'linkedin', 'website', 'github'];
+const PHOTO_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const userRow = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+api.get('/profile', (req, res) => res.json({ user: A.userOut(userRow(req.user.id)) }));
+api.put('/profile', (req, res) => {
+  const b = req.body || {}, u = userRow(req.user.id);
+  const name = b.name !== undefined ? String(b.name).trim().slice(0, 100) : u.name;
+  if (!name) return res.status(400).json({ error: 'Name cannot be empty' });
+  const prev = JSON.parse(u.profile || '{}'), profile = {};
+  PROFILE_FIELDS.forEach((k) => { profile[k] = String(b.profile && b.profile[k] !== undefined ? b.profile[k] : prev[k] || '').trim().slice(0, 200); });
+  let photo = u.photo || '';
+  if (b.photo !== undefined) {
+    if (b.photo === '' || b.photo === null) photo = '';
+    else if (typeof b.photo === 'string' && b.photo.length <= 600000 && PHOTO_RE.test(b.photo)) photo = b.photo;
+    else return res.status(400).json({ error: 'Photo must be a PNG, JPEG or WebP image under 400 KB' });
+  }
+  db.prepare('UPDATE users SET name = ?, profile = ?, photo = ? WHERE id = ?').run(name, JSON.stringify(profile), photo, u.id);
+  res.json({ user: A.userOut(userRow(u.id)) });
+});
+api.post('/profile/password', (req, res) => {
+  const u = userRow(req.user.id), { current, password } = req.body || {};
+  if (typeof password !== 'string' || password.length < 8 || password.length > 200) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  const has = u.pass_hash && u.pass_hash !== '!';
+  if (has && !(typeof current === 'string' && A.verifyPassword(current, u.pass_hash))) return res.status(403).json({ error: 'Current password is incorrect' });
+  db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(A.hashPassword(password), u.id);
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(u.id, A.currentTokenHash(req)); // sign out other devices
+  res.json({ ok: true });
+});
+
+/* a new resume starts from the account profile: name, title, contact details; the photo stays linked (photoMode: 'profile') */
+function applyProfile(doc, u) {
+  const p = JSON.parse(u.profile || '{}'), h = doc.header, cid = () => Math.random().toString(36).slice(2, 10);
+  const url = (v) => (/^https?:\/\//i.test(v) ? v : 'https://' + v);
+  h.name = u.name || h.name;
+  if (p.headline) h.title = p.headline;
+  const contacts = [];
+  if (p.phone) contacts.push({ id: cid(), icon: 'phone', text: p.phone, link: '' });
+  contacts.push({ id: cid(), icon: 'mail', text: u.email, link: '' });
+  if (p.linkedin) contacts.push({ id: cid(), icon: 'linkedin', text: p.linkedin.replace(/^https?:\/\//i, ''), link: url(p.linkedin) });
+  if (p.github) contacts.push({ id: cid(), icon: 'github', text: p.github.replace(/^https?:\/\//i, ''), link: url(p.github) });
+  if (p.website) contacts.push({ id: cid(), icon: 'globe', text: p.website.replace(/^https?:\/\//i, ''), link: url(p.website) });
+  if (p.location) contacts.push({ id: cid(), icon: 'pin', text: p.location, link: '' });
+  h.contacts = contacts.slice(0, 10);
+  h.photo = ''; h.photoMode = 'profile';
+}
+
 api.get('/resumes', (req, res) => {
   res.json(db.prepare('SELECT * FROM resumes WHERE user_id = ? ORDER BY updated_at DESC').all(req.user.id).map((r) => rowOut(r)));
 });
@@ -100,7 +148,7 @@ api.post('/resumes', (req, res) => {
   let doc;
   if (data) doc = T.normalizeDoc(data);
   else doc = blank ? T.blankDoc(template) : T.sampleDoc(template);
-  if (!data && !blank) { doc.header.name = req.user.name || doc.header.name; }
+  if (!data) applyProfile(doc, userRow(req.user.id));
   const id = crypto.randomBytes(9).toString('base64url');
   const now = Date.now();
   db.prepare('INSERT INTO resumes (id, user_id, title, data, created_at, updated_at) VALUES (?,?,?,?,?,?)').run(id, req.user.id, cleanTitle(title), JSON.stringify(doc), now, now);
@@ -148,7 +196,7 @@ api.get('/resumes/:id/pdf', async (req, res) => {
   const r = own(req);
   if (!r) return res.status(404).json({ error: 'Not found' });
   try {
-    const doc = JSON.parse(r.data);
+    const doc = T.resolveProfile(JSON.parse(r.data), { photo: (userRow(req.user.id) || {}).photo });
     const buf = await renderPdf(doc);
     const fname = (r.title || 'resume').replace(/[^\w.\- ]+/g, '').trim().replace(/\s+/g, '_') || 'resume';
     res.setHeader('Content-Type', 'application/pdf');

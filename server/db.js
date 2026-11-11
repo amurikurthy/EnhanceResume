@@ -45,7 +45,7 @@ db.exec(`
 const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
 for (const [name, ddl] of [
   ['is_admin', 'INTEGER NOT NULL DEFAULT 0'], ['disabled', 'INTEGER NOT NULL DEFAULT 0'],
-  ['oidc_sub', 'TEXT'], ['last_login', 'INTEGER'],
+  ['oidc_sub', 'TEXT'], ['last_login', 'INTEGER'], ['photo', 'TEXT'], ['profile', "TEXT NOT NULL DEFAULT '{}'"],
 ]) if (!cols.includes(name)) db.exec(`ALTER TABLE users ADD COLUMN ${name} ${ddl}`);
 db.exec('CREATE INDEX IF NOT EXISTS idx_users_oidc ON users(oidc_sub)');
 

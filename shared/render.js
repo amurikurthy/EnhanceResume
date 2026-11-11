@@ -241,16 +241,33 @@
     const contacts = s.header.in === 'main' && s.header.contactsIn === 'side' && h.contacts.some((c) => c.text);
     return !!photo || contacts;
   }
+  /* Column geometry in mm.
+   * Normal layouts: both columns live inside the page margins and share the content width by columnRatio.
+   * Filled (full-bleed) sidebars: the coloured block keeps a constant share of the PAGE width, so wide margins
+   * only squeeze the main column; the margin on the sidebar side shrinks to a small inner padding instead of
+   * widening the coloured block. `shift` is how far the columns extend past the margin box on the sidebar side. */
+  function columnWidths(doc) {
+    const s = doc.settings, m = s.margins, gap = s.columnGap;
+    const [pw] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
+    const cw = pw - m.left - m.right;
+    if (s.layout === 'single') return { cw, mainW: cw, sideW: 0, fill: 0, shiftL: 0, shiftR: 0 };
+    if (!s.sidebarFilled) {
+      const mainW = (cw - gap) * (s.columnRatio / 100);
+      return { cw, mainW, sideW: cw - gap - mainW, fill: 0, shiftL: 0, shiftR: 0 };
+    }
+    const S = pw * (1 - s.columnRatio / 100); // width of the coloured sidebar block
+    const left = s.layout === 'side-left', edge = left ? m.left : m.right, inset = Math.min(edge, S * 0.16);
+    const sideW = S - inset - gap / 2, mainW = pw - S - gap / 2 - (left ? m.right : m.left);
+    return { cw, mainW: Math.max(40, mainW), sideW, fill: S, shiftL: left ? edge - inset : 0, shiftR: left ? 0 : edge - inset };
+  }
   function layoutInfo(doc) {
     const s = doc.settings;
     const sideSecs = doc.sections.filter((x) => x.column === 'side' && (EDIT || x.items.length));
     const mainSecs = doc.sections.filter((x) => x.column !== 'side' && (EDIT || x.items.length));
     const twoCol = s.layout !== 'single' && (sideSecs.length > 0 || sideHasContent(doc));
     const [pw, ph] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
-    const cw = pw - s.margins.left - s.margins.right;
-    let mainW = cw, sideW = 0;
-    if (twoCol) { mainW = (cw - s.columnGap) * (s.columnRatio / 100); sideW = cw - s.columnGap - mainW; }
-    return { twoCol, sideSecs, mainSecs, pw, ph, cw, mainW, sideW };
+    const w = columnWidths(twoCol ? doc : { settings: Object.assign({}, s, { layout: 'single' }) });
+    return { twoCol, sideSecs, mainSecs, pw, ph, cw: w.cw, mainW: w.mainW, sideW: w.sideW, fill: w.fill, shiftL: w.shiftL, shiftR: w.shiftR };
   }
 
   /* CSS (style attribute value) for the page background layer: colour, pattern, filled sidebar */
@@ -264,8 +281,8 @@
     if (li.twoCol && s.sidebarFilled) {
       const sb = s.colors.sidebarBg;
       let g;
-      if (s.layout === 'side-left') { const x = (s.margins.left + li.sideW + s.columnGap / 2).toFixed(2) + 'mm'; g = `linear-gradient(90deg,${sb} 0,${sb} ${x},transparent ${x})`; }
-      else { const x = (s.margins.left + li.mainW + s.columnGap / 2).toFixed(2) + 'mm'; g = `linear-gradient(90deg,transparent 0,transparent ${x},${sb} ${x})`; }
+      if (s.layout === 'side-left') { const x = li.fill.toFixed(2) + 'mm'; g = `linear-gradient(90deg,${sb} 0,${sb} ${x},transparent ${x})`; }
+      else { const x = (li.pw - li.fill).toFixed(2) + 'mm'; g = `linear-gradient(90deg,transparent 0,transparent ${x},${sb} ${x})`; }
       imgs.push(g); sizes.push('100% 100%'); reps.push('no-repeat'); poss.push('0 0');
     }
     const [pwMM, phMM] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
@@ -382,7 +399,7 @@
       '--on-accent': T.luminance(c.accent) > 0.5 ? '#111111' : '#ffffff',
       '--font-h': fonts[s.fontHeading], '--font-b': fonts[s.fontBody],
       '--fs': s.fontSize + 'pt', '--lh': s.lineHeight, '--sgap': s.sectionGap + 'mm', '--egap': s.entryGap + 'mm', '--gap': s.columnGap + 'mm',
-      '--main-w': li.mainW.toFixed(2) + 'mm', '--side-w': li.sideW.toFixed(2) + 'mm', '--photo': s.header.photoSize + 'mm',
+      '--main-w': li.mainW.toFixed(2) + 'mm', '--side-w': li.sideW.toFixed(2) + 'mm', '--shift-l': (li.twoCol ? li.shiftL : 0).toFixed(2) + 'mm', '--shift-r': (li.twoCol ? li.shiftR : 0).toFixed(2) + 'mm', '--photo': s.header.photoSize + 'mm',
       '--name-size': s.header.nameSize + 'pt', '--title-size': s.header.titleSize + 'pt', '--hsize': s.heading.size + 'pt',
       '--hweight': s.heading.weight, '--hspace': s.heading.spacing + 'em', '--etitle': s.entries.titleSize + 'pt',
       '--org': orgColor, '--title-color': titleColor,
@@ -409,5 +426,5 @@
     return `<div class="${cls.join(' ')}" style="${style}">${html}</div>`;
   }
 
-  return { render, pageBg, layoutInfo, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl, setIconLib, libs };
+  return { render, pageBg, layoutInfo, columnWidths, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl, setIconLib, libs };
 });

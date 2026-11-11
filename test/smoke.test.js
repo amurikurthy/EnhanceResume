@@ -78,3 +78,24 @@ test('icon names: library and brand icons are accepted, junk is dropped', () => 
   assert.equal(d.sections[0].icon, 'brand:cisco');
   assert.deepEqual(d.sections[0].items.map((i) => i.icon), ['router', '', '']);
 });
+
+test('profile: details and photo flow into new resumes, validation, password change', async () => {
+  const a = await signup('prof-a@example.com'), b = await signup('prof-b@example.com');
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  assert.equal((await call('PUT', '/api/profile', { photo: 'javascript:alert(1)' }, a)).status, 400);
+  const up = await (await call('PUT', '/api/profile', { name: 'Pat Doe', photo: png, profile: { headline: 'Network Engineer', phone: '555-1', linkedin: 'linkedin.com/in/pat', location: 'Chicago, IL' } }, a)).json();
+  assert.equal(up.user.name, 'Pat Doe'); assert.equal(up.user.photo, png);
+  assert.equal((await (await call('GET', '/api/profile', null, b)).json()).user.photo, '', 'profiles are per account');
+  const r = await (await call('POST', '/api/resumes', { title: 'X', blank: true }, a)).json();
+  assert.equal(r.data.header.name, 'Pat Doe'); assert.equal(r.data.header.title, 'Network Engineer'); assert.equal(r.data.header.photoMode, 'profile');
+  assert.equal(r.data.header.photo, '', 'the photo stays linked, it is not copied into the resume');
+  assert.ok(r.data.header.contacts.some((c) => c.icon === 'phone' && c.text === '555-1'));
+  assert.ok(r.data.header.contacts.some((c) => c.icon === 'mail' && c.text === 'prof-a@example.com'));
+  assert.equal((await call('GET', `/api/resumes/${r.id}/pdf`, null, a)).status, 200);
+  // password change: wrong current rejected, other sessions revoked
+  const second = (await call('POST', '/api/auth/login', { email: 'prof-a@example.com', password: 'password123' })); const other = second.headers.get('set-cookie').split(';')[0];
+  assert.equal((await call('POST', '/api/profile/password', { current: 'nope-nope', password: 'brand-new-pass1' }, a)).status, 403);
+  assert.equal((await call('POST', '/api/profile/password', { current: 'password123', password: 'brand-new-pass1' }, a)).status, 200);
+  assert.equal((await (await call('GET', '/api/auth/me', null, other)).json()).user, null, 'other devices are signed out');
+  assert.equal((await (await call('GET', '/api/auth/me', null, a)).json()).user.name, 'Pat Doe', 'current session stays');
+});

@@ -2,6 +2,7 @@ import * as api from './api.js';
 import { h, toast, modal, confirmDlg, thumb, downloadBlob, themeButton } from './ui.js';
 import { state, logout } from './app.js';
 import { ensureIconsFor } from './icons.js';
+import { openProfile, avatar, firstName } from './profile.js';
 
 const T = window.ERT;
 
@@ -9,8 +10,13 @@ export function topbar(extra) {
   return h('header', { class: 'topbar' },
     h('a', { class: 'logo', href: '#/' }, h('span', { class: 'logo-mark' }), 'EnhanceResume'),
     h('div', { class: 'spacer' }), extra, state.user.isAdmin ? h('a', { class: 'btn ghost', href: '#/admin' }, 'Admin') : null,
-    themeButton(), h('div', { class: 'user' }, h('span', { class: 'avatar' }, (state.user.name || '?')[0].toUpperCase()), h('span', { class: 'uname' }, state.user.name),
-      h('button', { class: 'btn ghost', onclick: logout }, 'Sign out')));
+    themeButton(), userChip(), h('button', { class: 'btn ghost', onclick: logout }, 'Sign out'));
+}
+function userChip() {
+  const chip = h('button', { type: 'button', class: 'user', title: 'Edit your profile and photo', 'aria-label': 'Edit your profile', onclick: openProfile });
+  const draw = () => chip.replaceChildren(avatar(state.user), h('span', { class: 'uname', title: state.user.name }, firstName(state.user)));
+  draw(); window.addEventListener('er-profile', () => { if (chip.isConnected) draw(); });
+  return chip;
 }
 
 async function newResumeDialog() {

@@ -265,6 +265,7 @@
     const h = isObj(doc.header) ? doc.header : {};
     const header = {
       name: str(h.name, 120), title: str(h.title, 160), tagline: str(h.tagline, 300), photo: img(h.photo, 600000),
+      photoMode: ['profile', 'custom', 'none'].includes(h.photoMode) ? h.photoMode : (img(h.photo, 600000) ? 'custom' : 'profile'),
       contacts: (Array.isArray(h.contacts) ? h.contacts : []).slice(0, MAX.contacts).map((c) => ({
         id: str(c && c.id, 20) || uid(), icon: CONTACT_ICONS.includes(c && c.icon) ? c.icon : 'link',
         text: str(c && c.text, 200), link: str(c && c.link, 300),
@@ -504,7 +505,7 @@
     const base = {
       v: 1, settings: defaultSettings(),
       header: {
-        name: 'Alex Rivera', title: 'Senior Product Designer', tagline: 'Design systems | Accessibility | Data-informed craft', photo: '',
+        name: 'Alex Rivera', title: 'Senior Product Designer', tagline: 'Design systems | Accessibility | Data-informed craft', photo: '', photoMode: 'profile',
         contacts: [
           { id: uid(), icon: 'phone', text: '555-010-2030', link: '' },
           { id: uid(), icon: 'mail', text: 'alex.rivera@example.com', link: '' },
@@ -545,18 +546,28 @@
 
   function blankDoc(templateId) {
     const d = sampleDoc(templateId);
-    d.header = { name: 'Your Name', title: 'Your Title', tagline: '', photo: '', contacts: [{ id: uid(), icon: 'mail', text: 'you@example.com', link: '' }, { id: uid(), icon: 'phone', text: '555-000-0000', link: '' }] };
+    d.header = { name: 'Your Name', title: 'Your Title', tagline: '', photo: '', photoMode: 'profile', contacts: [{ id: uid(), icon: 'mail', text: 'you@example.com', link: '' }, { id: uid(), icon: 'phone', text: '555-000-0000', link: '' }] };
     d.sections = ['summary', 'experience', 'education', 'skills'].map((t) => {
       const s = newSection(t, { blank: true }); if (t === 'skills') s.items = [Object.assign(newItem('skills'), { name: 'Group', tags: ['Skill', 'Skill'] })]; return s;
     });
     return templateId ? applyTemplate(d, templateId) : d;
   }
 
+  /* The account's profile photo is linked into resumes (photoMode 'profile') unless a resume overrides it. */
+  let PROFILE = null;
+  const setProfile = (u) => { PROFILE = u || null; };
+  function resolveProfile(doc, u) {
+    const who = u === undefined ? PROFILE : u, h = doc.header;
+    if (h.photoMode === 'profile') return who && who.photo ? Object.assign({}, doc, { header: Object.assign({}, h, { photo: who.photo }) }) : Object.assign({}, doc, { header: Object.assign({}, h, { photo: '' }) });
+    if (h.photoMode === 'none') return Object.assign({}, doc, { header: Object.assign({}, h, { photo: '' }) });
+    return doc;
+  }
+
   const PAGE_MM = { A4: [210, 297], Letter: [215.9, 279.4] };
 
   return {
     FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
-    defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
+    setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
     ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'],
     deepMerge, clone, uid, mix, luminance,
   };
