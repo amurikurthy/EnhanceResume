@@ -15,7 +15,36 @@ A self-hosted, multi-tenant resume builder with live preview, drag & drop editin
 ## Run
 
 ```bash
-docker compose up --build        # then open http://localhost:3000
+git clone https://github.com/amurikurthy/enhanceresume.git && cd enhanceresume
+docker compose up -d --build     # then open http://localhost:3000
+```
+
+Common commands: `docker compose logs -f` (logs), `docker compose down` (stop; data is kept), `docker compose down -v` (stop and **delete all data**), `docker compose up -d --build` (rebuild after pulling updates).
+
+### docker-compose.yml
+
+The repo ships this file; edit the environment values to suit:
+
+```yaml
+services:
+  enhanceresume:
+    build: .
+    image: enhanceresume:latest
+    container_name: enhanceresume
+    restart: unless-stopped
+    ports:
+      - "3000:3000"            # host:container, change the left side to use another port
+    environment:
+      ALLOW_REGISTRATION: "true"   # "false" closes sign-ups
+      COOKIE_SECURE: "false"       # "true" when served over HTTPS
+      # TRUST_PROXY: "true"        # enable behind nginx/traefik
+      MAX_RESUMES_PER_USER: "50"
+      PDF_CONCURRENCY: "3"
+    volumes:
+      - er-data:/data          # SQLite database persists here
+    shm_size: "512mb"          # Chromium needs shared memory for PDF rendering
+volumes:
+  er-data:
 ```
 
 Create an account on the sign-in page. Data (SQLite) lives in the `er-data` volume at `/data`.
