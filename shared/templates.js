@@ -178,7 +178,7 @@
         sidebarBg: '#eef4ff', sideText: '#ffffff', sideAccent: '#9cc9ff',
         headerBg: '#2b8aff', headerText: '#ffffff', line: '#cfcfcf', chipBg: '#ffffff', chipBorder: '#c9c9c9',
       },
-      pattern: { type: 'circles', area: 'header', color: '#2b8aff', opacity: 0.14, scale: 1 },
+      pattern: { type: 'circles', area: 'header', color: '#2b8aff', opacity: 0.14, scale: 1, corner: 'tr' },
       header: {
         style: 'left', in: 'top', contactsIn: 'header', align: 'left',
         photoShape: 'circle', photoSize: 27, photoPos: 'right',
@@ -195,7 +195,8 @@
   const ENUMS = {
     layout: ['single', 'side-right', 'side-left'], pageSize: ['A4', 'Letter'],
     fontHeading: FONT_NAMES, fontBody: FONT_NAMES,
-    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network'],
+    'pattern.type': ['none', 'dots', 'grid', 'lines', 'diagonal', 'crosshatch', 'circles', 'waves', 'zigzag', 'triangles', 'circuit', 'network', 'arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'],
+    'pattern.corner': ['tr', 'tl', 'br', 'bl'],
     'pattern.area': ['header', 'page'],
     'header.style': ['left', 'center', 'banner'], 'header.in': ['top', 'main'], 'header.contactsIn': ['header', 'side'],
     'header.align': ['left', 'center', 'right'],
@@ -555,6 +556,7 @@
   return {
     FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
     defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
+    ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'],
     deepMerge, clone, uid, mix, luminance,
   };
 });

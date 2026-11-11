@@ -120,9 +120,59 @@
   const fa = (id, mode, ph) => (EDIT ? ` data-f="${esc(id)}" data-m="${mode}" data-ph="${esc(ph || '')}" contenteditable="${mode === 'line' ? 'plaintext-only' : 'true'}" spellcheck="false"` : '');
   const ia = (id) => (EDIT ? ` data-iid="${esc(id)}"` : '');
 
+
+  /* ---------- subtle corner accents: one piece of fine line art per page (not a tiled texture) ---------- */
+  const ACCENTS = ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade'];
+  function accentArt(type, col, op) { // drawn on a 210x297 page, anchored top-right
+    const st = (w) => `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="${op}"`;
+    const ring = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" ${st(0.35)}/>`;
+    const dot = (x, y, r, o) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" fill-opacity="${(op * (o == null ? 1 : o)).toFixed(3)}"/>`;
+    let b = '';
+    if (type === 'arcs') {
+      [30, 46, 62, 80, 100, 122].forEach((rad) => { b += `<circle cx="210" cy="0" r="${rad}" ${st(0.35)}/>`; });
+      [[210 - 46 * Math.cos(0.5), 46 * Math.sin(0.5)], [210 - 80 * Math.cos(1.0), 80 * Math.sin(1.0)], [210 - 100 * Math.cos(0.25), 100 * Math.sin(0.25)], [210 - 62 * Math.cos(1.2), 62 * Math.sin(1.2)]].forEach(([x, y]) => { b += ring(x.toFixed(1), y.toFixed(1), 1.6); });
+      b += `<circle cx="168" cy="44" r="12" ${st(0.3)}/><circle cx="168" cy="44" r="22" ${st(0.3)}/>`;
+    } else if (type === 'traces') {
+      const paths = ['M210 14H180L166 28V60L174 68H198', 'M210 24H184L172 36V78L182 88', 'M210 34H192L180 46V98L188 106H210', 'M150 0V18L140 28V68L148 76', 'M122 0V10L112 20H98', 'M210 122H198L188 132V152', 'M160 0V8L156 12'];
+      paths.forEach((d) => { b += `<path d="${d}" ${st(0.4)}/>`; });
+      [[198, 68], [182, 88], [148, 76], [98, 20], [188, 152], [210, 106]].forEach(([x, y]) => { b += ring(x, y, 1.9); });
+      [[166, 28], [180, 46], [140, 28], [188, 132]].forEach(([x, y]) => { b += dot(x, y, 0.9); });
+    } else if (type === 'contour') {
+      const blob = (cx, cy, R, ph) => { let d = ''; for (let i = 0; i <= 72; i++) { const t = (i / 72) * 2 * Math.PI, rr = R * (1 + 0.13 * Math.sin(3 * t + ph) + 0.07 * Math.sin(5 * t + 2 * ph)); d += (i ? 'L' : 'M') + (cx + rr * Math.cos(t)).toFixed(1) + ' ' + (cy + rr * Math.sin(t)).toFixed(1); } return d + 'Z'; };
+      [11, 20, 30, 41, 53, 66, 80, 96].forEach((R, i) => { b += `<path d="${blob(196, 20, R, i * 0.6)}" ${st(0.3)}/>`; });
+    } else if (type === 'nodemap') {
+      const n = [[196, 18], [172, 30], [186, 52], [150, 22], [160, 58], [128, 38], [200, 84], [170, 88]];
+      const l = [[0, 1], [0, 2], [1, 2], [1, 3], [1, 4], [2, 4], [3, 5], [4, 5], [2, 6], [4, 7], [6, 7]];
+      l.forEach(([i, j]) => { b += `<path d="M${n[i][0]} ${n[i][1]}L${n[j][0]} ${n[j][1]}" ${st(0.3)}/>`; });
+      n.forEach(([x, y], i) => { b += i % 3 === 0 ? ring(x, y, 2.4) : dot(x, y, 1.3); });
+    } else if (type === 'dotfade') {
+      for (let ix = 0; ix < 22; ix++) for (let iy = 0; iy < 18; iy++) {
+        const x = 207 - ix * 5.5, y = 4 + iy * 5.5, d = Math.hypot(207 - x, y - 4) / 105, o = Math.max(0, 1 - d);
+        if (o > 0.04) b += dot(x.toFixed(1), y.toFixed(1), 0.75, Math.pow(o, 1.4).toFixed(2));
+      }
+    } else if (type === 'linefade') {
+      for (let i = 0; i < 26; i++) {
+        const o = Math.max(0.1, 1 - i / 26), c = 14 + i * 5.2;
+        b += `<path d="M${210 - c} 0L210 ${c}" fill="none" stroke="${col}" stroke-width="0.3" stroke-opacity="${(op * o).toFixed(3)}"/>`;
+      }
+    }
+    return b;
+  }
+  const CORNER_T = { tr: '', tl: 'translate(210 0) scale(-1 1)', br: 'translate(0 297) scale(1 -1)', bl: 'translate(210 297) scale(-1 -1)' };
+
   /* ---------- patterns ---------- */
-  function patternLayer(p) {
+  function patternLayer(p, ctx) {
     if (!p || p.type === 'none') return null;
+    if (ACCENTS.includes(p.type)) {
+      const t = CORNER_T[p.corner] || '';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" preserveAspectRatio="xMaxYMin slice"><g${t ? ` transform="${t}"` : ''}>${accentArt(p.type, p.color, p.opacity)}</g></svg>`;
+      const uri = "url('data:image/svg+xml," + encodeURIComponent(svg).replace(/'/g, '%27') + "')";
+      const flip = p.corner === 'br' || p.corner === 'bl', left = p.corner === 'tl' || p.corner === 'bl';
+      const pos = `${left ? 'left' : 'right'} ${flip ? 'bottom' : 'top'}`;
+      if (ctx && ctx.pw) return { img: uri, size: `${ctx.pw} ${ctx.ph}`, repeat: 'repeat-y', pos, accent: true };
+      const w = Math.round(640 * p.scale);
+      return { img: uri, size: `${w}px ${Math.round(w * 297 / 210)}px`, repeat: 'no-repeat', pos, accent: true };
+    }
     const col = p.color, op = p.opacity, sc = p.scale;
     const a = `fill-opacity="${op}" stroke-opacity="${op}"`;
     let w = 20, h = 20, body = '', repeat = 'repeat', pos = '0 0';
@@ -192,9 +242,9 @@
   /* CSS (style attribute value) for the page background layer: colour, pattern, filled sidebar */
   function pageBg(doc, o) {
     const prev = EDIT; EDIT = !!(o && o.edit);
-    try { return pageBgInner(doc); } finally { EDIT = prev; }
+    try { return pageBgInner(doc, o || {}); } finally { EDIT = prev; }
   }
-  function pageBgInner(doc) {
+  function pageBgInner(doc, o) {
     const s = doc.settings, li = layoutInfo(doc);
     const imgs = [], sizes = [], reps = [], poss = [];
     if (li.twoCol && s.sidebarFilled) {
@@ -204,8 +254,10 @@
       else { const x = (s.margins.left + li.mainW + s.columnGap / 2).toFixed(2) + 'mm'; g = `linear-gradient(90deg,transparent 0,transparent ${x},${sb} ${x})`; }
       imgs.push(g); sizes.push('100% 100%'); reps.push('no-repeat'); poss.push('0 0');
     }
-    const pl = s.pattern.area === 'page' ? patternLayer(s.pattern) : null;
-    if (pl) { imgs.push(pl.img); sizes.push(pl.size); reps.push(pl.repeat); poss.push(pl.pos); }
+    const [pwMM, phMM] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
+    const pl = s.pattern.area === 'page' ? patternLayer(s.pattern, { pw: pwMM + 'mm', ph: o.pageH || phMM + 'mm' }) : null;
+    // fine accents sit above the sidebar fill; tiled textures stay underneath it
+    if (pl) { const at = pl.accent ? 0 : imgs.length; imgs.splice(at, 0, pl.img); sizes.splice(at, 0, pl.size); reps.splice(at, 0, pl.repeat); poss.splice(at, 0, pl.pos); }
     let css = `background-color:${s.colors.bg};`;
     if (imgs.length) css += `background-image:${imgs.join(',')};background-size:${sizes.join(',')};background-repeat:${reps.join(',')};background-position:${poss.join(',')};`;
     return css;

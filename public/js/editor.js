@@ -134,7 +134,7 @@ export async function mountEditor(root, id) {
     sheet.style.width = pw + 'mm';
     sheet.style.padding = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
     sheet.classList.toggle('sheet-edit', edit);
-    bgEl.setAttribute('style', R.pageBg(d, { edit }));
+    bgEl.setAttribute('style', R.pageBg(d, { edit, pageH: pageGeom().stride + 'px' }));
     content.innerHTML = R.render(d, { edit });
     needRepaint = false;
     measure();
@@ -243,7 +243,7 @@ export async function mountEditor(root, id) {
     if (focusId) focusField(focusId);
     softPanel();
   }
-  function softPanel() { if (!panelBody.contains(document.activeElement)) drawPanel(); }
+  function softPanel() { if (tab === 'content' && !panelBody.contains(document.activeElement)) drawPanel(); }
   function focusField(id) {
     const el = content.querySelector(`[data-f="${id}"]`);
     if (!el) return;
@@ -737,12 +737,21 @@ export async function mountEditor(root, id) {
     return wrap;
   }
   function patternGrid() {
-    const types = T.ENUMS['pattern.type'];
-    return h('div', { class: 'pat-grid' }, types.map((t) => {
-      const layer = t === 'none' ? null : R.patternLayer({ type: t, color: '#64748b', opacity: 0.7, scale: t === 'circles' ? 0.2 : 0.75 });
-      return h('button', { type: 'button', class: 'pat' + (S().pattern.type === t ? ' on' : ''), title: t, onclick: () => { S().pattern.type = t; touch(); drawPanel(); },
-        style: layer ? { backgroundImage: layer.img, backgroundSize: layer.size, backgroundRepeat: layer.repeat, backgroundPosition: t === 'circles' ? 'right -6px top -6px' : layer.pos } : null }, t === 'none' ? h('span', { class: 'muted' }, 'None') : null);
-    }));
+    const accents = T.ACCENT_PATTERNS, tiles = T.ENUMS['pattern.type'].filter((t) => t !== 'none' && !accents.includes(t));
+    const tile = (t) => {
+      const acc = accents.includes(t);
+      const layer = t === 'none' ? null : R.patternLayer({ type: t, color: '#64748b', opacity: acc ? 0.9 : 0.7, scale: t === 'circles' ? 0.2 : 0.75, corner: S().pattern.corner });
+      const style = !layer ? null : acc ? { backgroundImage: layer.img, backgroundSize: '230% auto', backgroundRepeat: 'no-repeat', backgroundPosition: layer.pos }
+        : { backgroundImage: layer.img, backgroundSize: layer.size, backgroundRepeat: layer.repeat, backgroundPosition: t === 'circles' ? 'right -6px top -6px' : layer.pos };
+      return h('button', { type: 'button', class: 'pat' + (S().pattern.type === t ? ' on' : ''), title: t,
+        onclick: () => {
+          S().pattern.type = t;
+          if (acc) { S().pattern.area = 'page'; if (S().pattern.opacity > 0.25) S().pattern.opacity = 0.14; if (S().pattern.scale > 1.6) S().pattern.scale = 1; }
+          touch(); drawPanel();
+        }, style }, t === 'none' ? h('span', { class: 'muted' }, 'None') : null);
+    };
+    return h('div', null, h('div', { class: 'pat-sub' }, 'None & subtle accents (one per page)'), h('div', { class: 'pat-grid' }, [tile('none'), ...accents.map(tile)]),
+      h('div', { class: 'pat-sub' }, 'Full-page textures'), h('div', { class: 'pat-grid' }, tiles.map(tile)));
   }
   function simpleRange(label, get, set, min, max, step, lo, hi) {
     const el = h('input', { type: 'range', min, max, step, value: get() });
@@ -783,7 +792,7 @@ export async function mountEditor(root, id) {
         s.layout !== 'single' ? range('Column gap', 'columnGap', 3, 18, 1, 'mm') : null))),
       group('Background pattern', false,
         h('div', { class: 'f-lbl' }, 'Backgrounds'), patternGrid(),
-        s.pattern.type !== 'none' ? [seg('Apply to', 'pattern.area', [['header', 'Header only'], ['page', 'Whole page']]), color('Pattern color', 'pattern.color'),
+        s.pattern.type !== 'none' ? [seg('Apply to', 'pattern.area', [['header', 'Header only'], ['page', 'Whole page']]), T.ACCENT_PATTERNS.includes(s.pattern.type) ? seg('Corner', 'pattern.corner', [['tr', 'Top right'], ['tl', 'Top left'], ['br', 'Bottom right'], ['bl', 'Bottom left']]) : null, color('Pattern color', 'pattern.color'),
           range('Opacity', 'pattern.opacity', 0.02, 0.5, 0.01), range('Scale', 'pattern.scale', 0.5, 3, 0.1)] : null),
       group('Header', false,
         seg('Style', 'header.style', [['left', 'Left'], ['center', 'Centered'], ['banner', 'Banner']], redrawAll),
@@ -1064,8 +1073,11 @@ export async function mountEditor(root, id) {
   const tabs = h('div', { class: 'tabs' });
   const panelEl = h('aside', { class: 'panel' }, tabs, panelBody);
   const panelSplit = h('div', { class: 'splitter', title: 'Drag to resize · double-click to reset' });
+  let lastTab = null;
   function drawPanel() {
     const top = panelBody.scrollTop;
+    // only animate when switching tabs; in-place refreshes (picking a theme, layout, pattern...) must not flash
+    panelBody.classList.toggle('anim', tab !== lastTab); lastTab = tab;
     tabs.replaceChildren(...[['content', 'Content'], ['design', 'Design'], ['templates', 'Templates']].map(([k, l]) => h('button', { class: tab === k ? 'on' : '', onclick: () => { tab = k; drawPanel(); } }, l)));
     panelBody.replaceChildren(tab === 'content' ? contentTab() : tab === 'design' ? designTab() : templatesTab());
     panelBody.scrollTop = top;
