@@ -450,7 +450,10 @@ export async function mountEditor(root, id) {
     el.addEventListener('change', () => { setP(path, el.checked); touch(); });
     return h('label', { class: 'check' }, el, label);
   }
-  const group = (name, open, ...kids) => h('details', { class: 'grp', open }, h('summary', null, name), h('div', { class: 'grp-b' }, kids));
+  // open/closed state of collapsible groups survives panel redraws (picking a pattern, color theme, layout... redraws the panel)
+  const openState = new Map();
+  const remember = (key, d) => { d.addEventListener('toggle', () => openState.set(key, d.open)); return d; };
+  const group = (name, open, ...kids) => remember(name, h('details', { class: 'grp', open: openState.has(name) ? openState.get(name) : open }, h('summary', null, name), h('div', { class: 'grp-b' }, kids)));
 
   /* ---------------- sortable lists (drag & drop) ---------------- */
   // arr is the backing data array; renderRow(i, redraw) builds a draggable row. Rows can move between lists sharing a group.
@@ -696,11 +699,11 @@ export async function mountEditor(root, id) {
       group('Margins & spacing', true,
         simpleRange('Page margins', () => Math.round((s.margins.top + s.margins.bottom + s.margins.left + s.margins.right) / 4), (v) => { s.margins.top = s.margins.bottom = v; s.margins.left = s.margins.right = Math.round(v * 1.1); }, 4, 30, 1, 'narrow', 'wide'),
         simpleRange('Section spacing', () => s.sectionGap, (v) => { s.sectionGap = v; s.entryGap = Math.round(v * 0.5 * 2) / 2; }, 2, 12, 0.5, 'compact', 'more space'),
-        h('details', { class: 'adv' }, h('summary', null, 'Fine-tune margins and spacing'),
+        remember('adv', h('details', { class: 'adv', open: openState.get('adv') === true }, h('summary', null, 'Fine-tune margins and spacing'),
         range('Top margin', 'margins.top', 0, 35, 1, 'mm'), range('Bottom margin', 'margins.bottom', 0, 35, 1, 'mm'),
         range('Left margin', 'margins.left', 0, 35, 1, 'mm'), range('Right margin', 'margins.right', 0, 35, 1, 'mm'),
         range('Section spacing', 'sectionGap', 1, 14, 0.5, 'mm'), range('Entry spacing', 'entryGap', 0, 8, 0.5, 'mm'),
-        s.layout !== 'single' ? range('Column gap', 'columnGap', 3, 18, 1, 'mm') : null)),
+        s.layout !== 'single' ? range('Column gap', 'columnGap', 3, 18, 1, 'mm') : null))),
       group('Background pattern', false,
         h('div', { class: 'f-lbl' }, 'Backgrounds'), patternGrid(),
         s.pattern.type !== 'none' ? [seg('Apply to', 'pattern.area', [['header', 'Header only'], ['page', 'Whole page']]), color('Pattern color', 'pattern.color'),
