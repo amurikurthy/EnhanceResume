@@ -24,13 +24,13 @@ export function toast(msg, kind = '') {
   setTimeout(() => t.remove(), 3500);
 }
 
-export function modal(title, body, actions = []) {
+export function modal(title, body, actions = [], opts = {}) {
   return new Promise((resolve) => {
-    const close = (v) => { ov.remove(); resolve(v); };
+    const close = (v) => { ov.remove(); resolve(v === undefined ? null : v); };
     const ov = h('div', { class: 'overlay', onmousedown: (e) => { if (e.target === ov) close(null); } },
-      h('div', { class: 'modal' },
+      h('div', { class: 'modal' + (opts.wide ? ' wide' : '') },
         h('div', { class: 'modal-h' }, h('h3', null, title), h('button', { class: 'icon-btn', onclick: () => close(null), 'aria-label': 'Close' }, '×')),
-        h('div', { class: 'modal-b' }, body),
+        h('div', { class: 'modal-b' }, typeof body === 'function' ? body(close) : body),
         actions.length ? h('div', { class: 'modal-f' }, actions.map((a) => h('button', { class: 'btn ' + (a.kind || ''), onclick: () => close(a.value) }, a.label))) : null));
     document.body.append(ov);
     const f = ov.querySelector('input,textarea'); if (f) f.focus();

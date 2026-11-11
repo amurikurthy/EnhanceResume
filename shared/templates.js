@@ -81,39 +81,83 @@
 
   /* ---------- section types ---------- */
   const ICON_CHOICES = ['', 'award', 'shield', 'key', 'code', 'cloud', 'network', 'server', 'book', 'cap', 'briefcase',
-    'star', 'check', 'terminal', 'cpu', 'database', 'wifi', 'lock', 'flag', 'zap', 'tool', 'trend', 'layers', 'target', 'heart', 'globe', 'monitor'];
+    'star', 'check', 'terminal', 'cpu', 'database', 'wifi', 'lock', 'flag', 'zap', 'tool', 'trend', 'layers', 'target', 'heart', 'globe', 'monitor',
+    'users', 'thumb', 'megaphone', 'pen', 'smile', 'coffee', 'compass', 'bookmark', 'home', 'camera', 'music', 'linkedin', 'github', 'mail', 'phone', 'pin', 'calendar', 'user'];
   const CONTACT_ICONS = ['phone', 'mail', 'link', 'linkedin', 'github', 'globe', 'pin', 'star', 'calendar', 'user'];
 
   const entryLabels = (title, org) => ({ title, org });
   const SECTION_TYPES = {
     summary: { label: 'Summary', kind: 'text', title: 'Summary', column: 'main' },
+    custom: { label: 'Custom', kind: 'entries', title: 'Custom Section', column: 'main', labels: entryLabels('Title', 'Subtitle') },
+    languages: { label: 'Languages', kind: 'levels', title: 'Languages', column: 'side' },
+    training: { label: 'Training / Courses', kind: 'entries', title: 'Training / Courses', column: 'main', labels: entryLabels('Course', 'Provider') },
+    projects: { label: 'Projects', kind: 'entries', title: 'Projects', column: 'main', labels: entryLabels('Project', 'Role / organisation') },
+    achievements: { label: 'Key Achievements', kind: 'list', title: 'Key Achievements', column: 'side' },
+    volunteering: { label: 'Volunteering', kind: 'entries', title: 'Volunteering', column: 'main', labels: entryLabels('Role', 'Organisation') },
+    expertise: { label: 'Industry Expertise', kind: 'levels', title: 'Industry Expertise', column: 'side' },
+    interests: { label: 'Interests', kind: 'list', title: 'Interests', column: 'side' },
+    findOnline: { label: 'Find me online', kind: 'list', title: 'Find Me Online', column: 'side' },
+    certifications: { label: 'Certifications', kind: 'list', title: 'Certifications', column: 'side' },
+    awards: { label: 'Awards', kind: 'list', title: 'Awards', column: 'side' },
+    references: { label: 'References', kind: 'list', title: 'References', column: 'main' },
+    philosophy: { label: 'My Life Philosophy', kind: 'text', title: 'My Life Philosophy', column: 'main' },
+    publications: { label: 'Publications', kind: 'entries', title: 'Publications', column: 'main', labels: entryLabels('Title', 'Publisher') },
+    additionalExperience: { label: 'Additional Experience', kind: 'entries', title: 'Additional Experience', column: 'main', labels: entryLabels('Job title', 'Company') },
+    additionalSkills: { label: 'Additional Skills', kind: 'skills', title: 'Additional Skills', column: 'side' },
+    additionalPublications: { label: 'Additional Publications', kind: 'entries', title: 'Additional Publications', column: 'main', labels: entryLabels('Title', 'Publisher') },
+    strengths: { label: 'Strengths', kind: 'list', title: 'Strengths', column: 'side' },
     experience: { label: 'Experience', kind: 'entries', title: 'Experience', column: 'main', labels: entryLabels('Job title', 'Company') },
     education: { label: 'Education', kind: 'entries', title: 'Education', column: 'main', labels: entryLabels('Degree', 'School') },
-    projects: { label: 'Projects', kind: 'entries', title: 'Projects', column: 'main', labels: entryLabels('Project', 'Role / organisation') },
-    volunteering: { label: 'Volunteering', kind: 'entries', title: 'Volunteering', column: 'main', labels: entryLabels('Role', 'Organisation') },
-    publications: { label: 'Publications', kind: 'entries', title: 'Publications', column: 'main', labels: entryLabels('Title', 'Publisher') },
     skills: { label: 'Skills / Technologies', kind: 'skills', title: 'Technologies', column: 'side' },
-    certifications: { label: 'Certifications', kind: 'list', title: 'Certifications', column: 'side' },
-    achievements: { label: 'Achievements', kind: 'list', title: 'Achievements', column: 'side' },
-    interests: { label: 'Interests', kind: 'list', title: 'Interests', column: 'side' },
-    languages: { label: 'Languages', kind: 'levels', title: 'Languages', column: 'side' },
-    text: { label: 'Custom text', kind: 'text', title: 'Custom Section', column: 'main' },
+    text: { label: 'Custom text', kind: 'text', title: 'Custom Text', column: 'main' },
+  };
+
+  /* realistic starter content, used by the "add section" gallery and when a section is added */
+  const E = (o) => Object.assign({ title: '', org: '', orgLink: '', date: '', location: '', logo: '', icon: '', text: '', bullets: [] }, o);
+  const SAMPLES = {
+    summary: () => [{ text: 'Motivated professional with a record of delivering measurable results. Quick to learn, comfortable owning projects end to end.' }],
+    custom: () => [E({ title: 'Inspired & Challenged', icon: 'star', date: '10/2014 - 06/2015', text: 'More than 1 million children to love science, nature and engineering through #ScienceForAll' }), E({ title: 'Another highlight', icon: 'zap', date: '2016', text: 'Describe what you did and why it mattered.' })],
+    languages: () => [{ name: 'English', label: 'Proficient', level: 5 }, { name: 'Spanish', label: 'Advanced', level: 3 }],
+    training: () => [E({ title: 'Creative Writing', text: 'An intensive 4 week course for developing creative writing skills' }), E({ title: 'Introduction to Photoshop', text: 'Basics of web design using the Adobe Photoshop application' })],
+    projects: () => [E({ title: 'Tesla Model S for Kids', date: '11/2015 - 04/2016', bullets: ['Collaboration between Radio Flyer and Tesla to design a kid-friendly Model S car', 'Shot the demo video and photography for the website'] })],
+    achievements: () => [{ icon: 'zap', title: 'Inspired & Challenged', sub: 'More than 1 million children to love science, nature and engineering' }, { icon: 'megaphone', title: 'Developed Strong Brand', sub: 'Identity across all channels and touch points' }],
+    volunteering: () => [E({ title: 'Executive Member', org: 'AIESEC', date: '09/2014 - Present', text: 'An international non-governmental not-for-profit organization run by youth, providing leadership development and global internships.' })],
+    expertise: () => [{ name: 'Leadership', label: '', level: 4 }, { name: 'Management', label: '', level: 3 }],
+    interests: () => [{ icon: 'heart', title: 'TEDxBoston', sub: 'Recruited all speakers in last 3 years, attracted 70% of sponsors' }, { icon: 'coffee', title: 'My espresso', sub: 'Got certified after Blue Bottle’s barista 3-month training' }],
+    findOnline: () => [{ icon: 'linkedin', title: 'LinkedIn', sub: 'username' }, { icon: 'github', title: 'GitHub', sub: 'username' }],
+    certifications: () => [{ icon: 'award', title: 'Google Analytics Individual Qualification', sub: 'Google' }, { icon: 'award', title: 'Contextual Marketing', sub: 'HubSpot Academy' }],
+    awards: () => [{ icon: 'award', title: 'Dean’s List', sub: 'Cornell School of Engineering' }, { icon: 'globe', title: 'Valedictorian', sub: 'South Boston High School' }],
+    references: () => [{ icon: '', title: 'Thomas Brown', sub: 'thomas.brown@example.com · 1-503-254-1000' }, { icon: '', title: 'John Silver', sub: 'jj.silva@example.com · 1-503-254-2000' }],
+    philosophy: () => [{ text: '*First they ignore you, then they laugh at you, then they fight you, then you win.*\n— Mahatma Gandhi' }],
+    publications: () => [E({ title: 'Dublin 101', org: 'Dublin Globe', orgLink: '', date: '2023', text: 'An intro to the startup ecosystem of Dublin' })],
+    additionalExperience: () => [E({ title: 'Deputy Finance Director', org: 'City of New York', date: '2013 - 2014', location: 'New York, NY', bullets: ['Oversaw financial analysis of 70 buildings under the mayor’s economic plan', 'Anchored 6-person team with origination of $3 billion in municipal bonds'] })],
+    additionalSkills: () => [{ name: 'Frontend', tags: ['ReactJS', 'MongoDB', 'Redis', 'TypeScript', 'Webpack', 'Node.js'] }],
+    additionalPublications: () => [E({ title: 'Dublin 101', org: 'Dublin Globe', date: '2023', text: 'An intro to the startup ecosystem of Dublin' })],
+    strengths: () => [{ icon: 'trend', title: 'Go-getter', sub: '20+ recognitions have taught me that with persistence, one can achieve anything.' }],
+    experience: () => [E({ title: 'Job Title', org: 'Company', date: '01/2021 - Present', location: 'City, ST', bullets: ['Achievement with measurable impact', 'Another responsibility or result'] })],
+    education: () => [E({ title: 'Degree', org: 'University', date: '2015 - 2019', location: 'City, ST' })],
+    skills: () => [{ name: 'Frontend', tags: ['React', 'TypeScript', 'CSS'] }, { name: 'Backend', tags: ['Node.js', 'SQL'] }],
+    text: () => [{ text: 'Write anything here. Use **bold**, *italic*, links, or start lines with "- " for bullets.' }],
   };
 
   function newItem(type) {
     const kind = (SECTION_TYPES[type] || {}).kind;
     const id = uid();
     switch (kind) {
-      case 'entries': return { id, title: '', org: '', orgLink: '', date: '', location: '', logo: '', text: '', bullets: [''] };
+      case 'entries': return { id, title: '', org: '', orgLink: '', date: '', location: '', logo: '', icon: '', text: '', bullets: [''] };
       case 'skills': return { id, name: 'Group', tags: ['Skill'] };
       case 'list': return { id, icon: type === 'certifications' ? 'award' : '', title: '', sub: '' };
       case 'levels': return { id, name: '', label: '', level: 4 };
       default: return { id, text: '' };
     }
   }
-  function newSection(type) {
-    const t = SECTION_TYPES[type] || SECTION_TYPES.text;
-    return { id: uid(), type: SECTION_TYPES[type] ? type : 'text', title: t.title, column: t.column, items: [newItem(type)] };
+  /* a new section; with blank:true it starts empty, otherwise with editable sample content */
+  function newSection(type, o = {}) {
+    const real = SECTION_TYPES[type] ? type : 'text';
+    const t = SECTION_TYPES[real];
+    const items = !o.blank && SAMPLES[real] ? SAMPLES[real]().map((x) => Object.assign(newItem(real), clone(x), { id: uid() })) : [newItem(real)];
+    if (t.kind === 'entries') items.forEach((it) => { if (!Array.isArray(it.bullets)) it.bullets = []; });
+    return { id: uid(), type: real, title: t.title, icon: '', column: t.column, items };
   }
 
   /* ---------- default settings ---------- */
@@ -139,7 +183,7 @@
         photoShape: 'circle', photoSize: 27, photoPos: 'right',
         nameSize: 26, nameCase: 'upper', titleSize: 11.5, titleColor: 'accent',
       },
-      heading: { style: 'underline', case: 'upper', size: 11, weight: 700, spacing: 0.02 },
+      heading: { style: 'underline', case: 'upper', size: 11, weight: 700, spacing: 0.02, icons: true },
       entries: { dateStyle: 'icons', dividers: true, bulletStyle: 'disc', orgColor: 'accent', titleSize: 10.2 },
       skills: { style: 'chips' },
       levels: { style: 'dots' },
@@ -199,7 +243,7 @@
     switch (kind) {
       case 'entries': return {
         id, title: str(it.title, 160), org: str(it.org, 160), orgLink: str(it.orgLink, 300), date: str(it.date, 60),
-        location: str(it.location, 80), logo: img(it.logo, 120000), text: str(it.text, 3000),
+        location: str(it.location, 80), logo: img(it.logo, 120000), icon: ICON_CHOICES.includes(it.icon) ? it.icon : '', text: str(it.text, 3000),
         bullets: (Array.isArray(it.bullets) ? it.bullets : []).slice(0, MAX.bullets).map((b) => str(b, 1200)),
       };
       case 'skills': return {
@@ -228,7 +272,7 @@
       const type = SECTION_TYPES[s.type] ? s.type : 'text';
       const kind = SECTION_TYPES[type].kind;
       return {
-        id: str(s.id, 20) || uid(), type, title: str(s.title, 80), column: s.column === 'side' ? 'side' : 'main',
+        id: str(s.id, 20) || uid(), type, title: str(s.title, 80), icon: ICON_CHOICES.includes(s.icon) ? s.icon : '', column: s.column === 'side' ? 'side' : 'main',
         items: (Array.isArray(s.items) ? s.items : []).slice(0, MAX.items).map((it) => normItem(kind, type, it)),
       };
     });
@@ -373,7 +417,7 @@
 
   /* ---------- sample content ---------- */
   function sampleDoc(templateId) {
-    const mk = (type, items, title) => { const s = newSection(type); s.items = items.map((i) => Object.assign(newItem(type), i)); if (title) s.title = title; return s; };
+    const mk = (type, items, title) => { const s = newSection(type, { blank: true }); s.items = items.map((i) => Object.assign(newItem(type), i)); if (title) s.title = title; return s; };
     const base = {
       v: 1, settings: defaultSettings(),
       header: {
@@ -420,7 +464,7 @@
     const d = sampleDoc(templateId);
     d.header = { name: 'Your Name', title: 'Your Title', tagline: '', photo: '', contacts: [{ id: uid(), icon: 'mail', text: 'you@example.com', link: '' }, { id: uid(), icon: 'phone', text: '555-000-0000', link: '' }] };
     d.sections = ['summary', 'experience', 'education', 'skills'].map((t) => {
-      const s = newSection(t); if (t === 'skills') s.items = [Object.assign(newItem('skills'), { name: 'Group', tags: ['Skill', 'Skill'] })]; return s;
+      const s = newSection(t, { blank: true }); if (t === 'skills') s.items = [Object.assign(newItem('skills'), { name: 'Group', tags: ['Skill', 'Skill'] })]; return s;
     });
     return templateId ? applyTemplate(d, templateId) : d;
   }
@@ -428,7 +472,7 @@
   const PAGE_MM = { A4: [210, 297], Letter: [215.9, 279.4] };
 
   return {
-    FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
+    FONTS, PALETTES, THEMES, TEMPLATES, SECTION_TYPES, SAMPLES, ICON_CHOICES, CONTACT_ICONS, PAGE_MM, ENUMS,
     defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
     deepMerge, clone, uid, mix, luminance,
   };

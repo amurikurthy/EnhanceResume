@@ -111,3 +111,17 @@
 .rz-dots i.on { background: var(--accent); }
 .rz-bar { width: 24mm; height: 1.6mm; background: var(--line); border-radius: 1mm; overflow: hidden; display: block; flex: none; }
 .rz-bar i { display: block; height: 100%; background: var(--accent); }
+
+/* icons on entries and headings */
+.rz-eicon { width: 8.5mm; height: 8.5mm; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); margin-top: .2mm; }
+.rz-eicon .ic { width: 4.6mm; height: 4.6mm; }
+.rz-h-ic { display: inline-flex; vertical-align: -.12em; margin-right: 1.8mm; color: var(--accent); }
+.rz-h-ic .ic { width: 1.1em; height: 1.1em; }
+.hs-box .rz-h-ic { color: inherit; }
+.rz-li > span { display: inline-flex; flex: none; color: var(--accent); }
+/* quote + slider */
+.rz-quote { font-size: 1.05em; } .rz-quote em { color: var(--accent); font-weight: 700; font-style: normal; } .rz-quote p:last-child { text-align: right; color: var(--muted); font-size: .92em; }
+.rz-lv-col { flex-direction: column; align-items: stretch; gap: 1mm; }
+.rz-slider { position: relative; display: block; height: 1.4mm; background: var(--line); border-radius: 1mm; margin: 1.4mm 1.4mm 0 0; }
+.rz-slider i { display: block; height: 100%; background: var(--accent); border-radius: 1mm; }
+.rz-slider b { position: absolute; top: 50%; width: 3mm; height: 3mm; margin: -1.5mm 0 0 -1.5mm; border-radius: 50%; background: var(--heading); }

@@ -80,8 +80,24 @@
     layers: PL('12 2 2 7 12 12 22 7 12 2') + PL('2 17 12 22 22 17') + PL('2 12 12 17 22 12'),
     target: C(12, 12, 10) + C(12, 12, 6) + C(12, 12, 2),
     monitor: R(2, 3, 20, 14, 2) + L(8, 21, 16, 21) + L(12, 17, 12, 21),
+    users: P('M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2') + C(9, 7, 4) + P('M23 21v-2a4 4 0 0 0-3-3.87') + P('M16 3.13a4 4 0 0 1 0 7.75'),
+    thumb: P('M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3'),
+    megaphone: PL('11 5 6 9 2 9 2 15 6 15 11 19 11 5') + P('M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07'),
+    pen: P('M12 20h9') + P('M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'),
+    smile: C(12, 12, 10) + P('M8 14s1.5 2 4 2 4-2 4-2') + L(9, 9, 9.01, 9) + L(15, 9, 15.01, 9),
+    coffee: P('M18 8h1a4 4 0 0 1 0 8h-1') + P('M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z') + L(6, 1, 6, 4) + L(10, 1, 10, 4) + L(14, 1, 14, 4),
+    compass: C(12, 12, 10) + PL('16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76'),
+    bookmark: P('M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z'),
+    home: P('M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z') + PL('9 22 9 12 15 12 15 22'),
+    camera: P('M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z') + C(12, 13, 4),
+    music: P('M9 18V5l12-2v13') + C(6, 18, 3) + C(18, 16, 3),
   };
   const icon = (name) => (ICONS[name] ? `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>` : '');
+
+  /* ---------- edit mode: fields become contenteditable and carry an id (data-f) ---------- */
+  let EDIT = false;
+  const fa = (id, mode, ph) => (EDIT ? ` data-f="${esc(id)}" data-m="${mode}" data-ph="${esc(ph || '')}" contenteditable="${mode === 'line' ? 'plaintext-only' : 'true'}" spellcheck="false"` : '');
+  const ia = (id) => (EDIT ? ` data-iid="${esc(id)}"` : '');
 
   /* ---------- patterns ---------- */
   function patternLayer(p) {
@@ -120,8 +136,8 @@
   }
   function layoutInfo(doc) {
     const s = doc.settings;
-    const sideSecs = doc.sections.filter((x) => x.column === 'side' && x.items.length);
-    const mainSecs = doc.sections.filter((x) => x.column !== 'side' && x.items.length);
+    const sideSecs = doc.sections.filter((x) => x.column === 'side' && (EDIT || x.items.length));
+    const mainSecs = doc.sections.filter((x) => x.column !== 'side' && (EDIT || x.items.length));
     const twoCol = s.layout !== 'single' && (sideSecs.length > 0 || sideHasContent(doc));
     const [pw, ph] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
     const cw = pw - s.margins.left - s.margins.right;
@@ -131,7 +147,11 @@
   }
 
   /* CSS (style attribute value) for the page background layer: colour, pattern, filled sidebar */
-  function pageBg(doc) {
+  function pageBg(doc, o) {
+    const prev = EDIT; EDIT = !!(o && o.edit);
+    try { return pageBgInner(doc); } finally { EDIT = prev; }
+  }
+  function pageBgInner(doc) {
     const s = doc.settings, li = layoutInfo(doc);
     const imgs = [], sizes = [], reps = [], poss = [];
     if (li.twoCol && s.sidebarFilled) {
@@ -158,12 +178,12 @@
     return '';
   }
   function contactsHtml(doc, vertical) {
-    const cs = doc.header.contacts.filter((c) => c.text);
+    const cs = EDIT ? doc.header.contacts : doc.header.contacts.filter((c) => c.text);
     if (!cs.length) return '';
     const showIcons = doc.settings.contactIcons;
     return `<ul class="rz-contacts${vertical ? ' vert' : ''}" data-edit="header">` + cs.map((c) => {
-      const href = contactHref(c);
-      const label = href ? `<a href="${esc(href)}">${esc(c.text)}</a>` : `<span>${esc(c.text)}</span>`;
+      const href = EDIT ? '' : contactHref(c);
+      const label = EDIT ? `<span${fa('C:' + c.id, 'line', 'Contact')}>${esc(c.text)}</span>` : href ? `<a href="${esc(href)}">${esc(c.text)}</a>` : `<span>${esc(c.text)}</span>`;
       return `<li>${showIcons ? icon(c.icon) : ''}${label}</li>`;
     }).join('') + '</ul>';
   }
@@ -181,53 +201,66 @@
     const photo = side ? '' : photoHtml(doc);
     return `<header class="rz-header pp-${s.header.photoPos}" data-edit="header"${pstyle}>` +
       `<div class="rz-hd-text">` +
-      (h.name ? `<h1 class="rz-name">${esc(h.name)}</h1>` : '') +
-      (h.title ? `<div class="rz-jobtitle">${esc(h.title)}</div>` : '') +
+      (h.name || EDIT ? `<h1 class="rz-name"${fa('H:name', 'line', 'Your name')}>${esc(h.name)}</h1>` : '') +
+      (h.title || EDIT ? `<div class="rz-jobtitle"${fa('H:title', 'line', 'Job title')}>${esc(h.title)}</div>` : '') +
       (contactsInHeader ? contactsHtml(doc, false) : '') +
-      (h.tagline ? `<div class="rz-tagline">${fmt(h.tagline)}</div>` : '') +
+      (h.tagline || EDIT ? `<div class="rz-tagline"${fa('H:tagline', 'rich', 'Tagline')}>${fmt(h.tagline)}</div>` : '') +
       `</div>${photo}</header>`;
   }
 
-  function entryHtml(it, doc) {
+  function entryHtml(it, doc, sid) {
     const ds = doc.settings.entries.dateStyle;
     const ic = ds === 'icons';
-    const org = it.org ? (safeUrl(it.orgLink) ? `<a href="${esc(safeUrl(it.orgLink))}">${esc(it.org)}</a>` : esc(it.org)) : '';
-    const date = it.date ? `<span class="rz-e-date">${ic ? icon('calendar') : ''}${esc(it.date)}</span>` : '';
-    const loc = it.location ? `<span class="rz-e-loc">${ic ? icon('pin') : ''}${esc(it.location)}</span>` : '';
-    const bullets = it.bullets.filter((b) => b.trim());
-    return `<div class="rz-entry">` +
-      (it.logo ? `<img class="rz-logo" src="${esc(it.logo)}" alt="">` : '') +
+    const F = (f, mode, ph) => fa(`E:${sid}:${it.id}:${f}`, mode, ph);
+    const org = EDIT ? esc(it.org) : it.org ? (safeUrl(it.orgLink) ? `<a href="${esc(safeUrl(it.orgLink))}">${esc(it.org)}</a>` : esc(it.org)) : '';
+    const date = it.date || EDIT ? `<span class="rz-e-date">${ic ? icon('calendar') : ''}<span${F('date', 'line', 'Date')}>${esc(it.date)}</span></span>` : '';
+    const loc = it.location || EDIT ? `<span class="rz-e-loc">${ic ? icon('pin') : ''}<span${F('location', 'line', 'Location')}>${esc(it.location)}</span></span>` : '';
+    const bullets = it.bullets.map((b, i) => [b, i]).filter(([b]) => EDIT || b.trim());
+    const mark = it.logo ? `<img class="rz-logo" src="${esc(it.logo)}" alt="">` : it.icon ? `<span class="rz-eicon" data-pick="entry">${icon(it.icon)}</span>` : '';
+    return `<div class="rz-entry"${ia(it.id)}>` + mark +
       `<div class="rz-e-body"><div class="rz-e-head">` +
-      (it.title ? `<div class="rz-e-title">${fmt(it.title)}</div>` : '') +
-      (org ? `<div class="rz-e-org">${org}</div>` : '') + date + loc + `</div>` +
-      (it.text ? `<div class="rz-e-text">${richText(it.text)}</div>` : '') +
-      (bullets.length ? `<ul class="rz-bul">${bullets.map((b) => `<li>${fmt(b)}</li>`).join('')}</ul>` : '') +
+      (it.title || EDIT ? `<div class="rz-e-title"${F('title', 'rich', 'Title')}>${fmt(it.title)}</div>` : '') +
+      (org || EDIT ? `<div class="rz-e-org"${F('org', 'line', 'Organization')}>${org}</div>` : '') + date + loc + `</div>` +
+      (it.text || EDIT ? `<div class="rz-e-text"${F('text', 'multi', 'Add a description')}>${richText(it.text)}</div>` : '') +
+      (bullets.length ? `<ul class="rz-bul">${bullets.map(([b, i]) => `<li${fa(`B:${sid}:${it.id}:${i}`, 'rich', 'Describe an achievement')}>${fmt(b)}</li>`).join('')}</ul>` : '') +
       `</div></div>`;
   }
 
   function sectionHtml(sec, doc) {
-    const kind = (T.SECTION_TYPES[sec.type] || {}).kind;
+    const type = T.SECTION_TYPES[sec.type] || {};
+    const kind = type.kind;
+    const sid = sec.id;
     let body = '';
-    if (kind === 'text') body = sec.items.map((it) => `<div class="rz-text">${richText(it.text)}</div>`).join('');
-    else if (kind === 'entries') body = sec.items.map((it) => entryHtml(it, doc)).join('');
+    if (kind === 'text') {
+      body = sec.items.map((it) => `<div class="rz-text${sec.type === 'philosophy' ? ' rz-quote' : ''}"${ia(it.id)}${fa(`X:${sid}:${it.id}:text`, 'multi', 'Write something…')}>${richText(it.text)}</div>`).join('');
+    } else if (kind === 'entries') body = sec.items.map((it) => entryHtml(it, doc, sid)).join('');
     else if (kind === 'skills') {
-      body = sec.items.map((it) => `<div class="rz-sg">${it.name ? `<div class="rz-sg-name">${esc(it.name)}</div>` : ''}<div class="rz-tags">${it.tags.filter((t) => t.trim()).map((t) => `<span class="rz-tag">${esc(t)}</span>`).join('')}</div></div>`).join('');
+      body = sec.items.map((it) => `<div class="rz-sg"${ia(it.id)}>${it.name || EDIT ? `<div class="rz-sg-name"${fa(`G:${sid}:${it.id}:name`, 'line', 'Group')}>${esc(it.name)}</div>` : ''}<div class="rz-tags">${it.tags.map((t, j) => [t, j]).filter(([t]) => EDIT || t.trim()).map(([t, j]) => `<span class="rz-tag"${fa(`T:${sid}:${it.id}:${j}`, 'line', 'Skill')}>${esc(t)}</span>`).join('')}</div></div>`).join('');
     } else if (kind === 'list') {
-      body = sec.items.map((it) => `<div class="rz-li">${it.icon ? icon(it.icon) : ''}<div><div class="rz-li-t">${fmt(it.title)}</div>${it.sub ? `<div class="rz-li-s">${fmt(it.sub)}</div>` : ''}</div></div>`).join('');
+      body = sec.items.map((it) => `<div class="rz-li"${ia(it.id)}>${it.icon ? `<span data-pick="list">${icon(it.icon)}</span>` : ''}<div><div class="rz-li-t"${fa(`L:${sid}:${it.id}:title`, 'rich', 'Title')}>${fmt(it.title)}</div>${it.sub || EDIT ? `<div class="rz-li-s"${fa(`L:${sid}:${it.id}:sub`, 'rich', 'Details')}>${fmt(it.sub)}</div>` : ''}</div></div>`).join('');
     } else if (kind === 'levels') {
-      const st = doc.settings.levels.style;
+      const st = sec.type === 'expertise' ? 'slider' : doc.settings.levels.style;
       body = sec.items.map((it) => {
         let viz = '';
-        if (st === 'dots') viz = '<span class="rz-dots">' + [1, 2, 3, 4, 5].map((n) => `<i${n <= it.level ? ' class="on"' : ''}></i>`).join('') + '</span>';
-        else if (st === 'bars') viz = `<span class="rz-bar"><i style="width:${it.level * 20}%"></i></span>`;
-        return `<div class="rz-lv"><span class="rz-lv-n">${esc(it.name)}${st !== 'text' && it.label ? `<small>${esc(it.label)}</small>` : ''}</span>${st === 'text' ? `<span class="rz-lv-l">${esc(it.label)}</span>` : viz}</div>`;
+        const lv = EDIT ? ' data-lv' : '';
+        if (st === 'dots') viz = '<span class="rz-dots">' + [1, 2, 3, 4, 5].map((n) => `<i${n <= it.level ? ' class="on"' : ''}${EDIT ? ` data-lv="${n}"` : ''}></i>`).join('') + '</span>';
+        else if (st === 'bars') viz = `<span class="rz-bar"${lv}><i style="width:${it.level * 20}%"></i></span>`;
+        else if (st === 'slider') viz = `<span class="rz-slider"${lv}><i style="width:${it.level * 20}%"></i><b style="left:${it.level * 20}%"></b></span>`;
+        const label = st !== 'text' && (it.label || EDIT) && st !== 'slider' ? `<small${fa(`V:${sid}:${it.id}:label`, 'line', 'Level')}>${esc(it.label)}</small>` : '';
+        const wide = st === 'slider' ? ' rz-lv-col' : '';
+        return `<div class="rz-lv${wide}"${ia(it.id)}><span class="rz-lv-n"><span${fa(`V:${sid}:${it.id}:name`, 'line', 'Name')}>${esc(it.name)}</span>${label}</span>${st === 'text' ? `<span class="rz-lv-l"${fa(`V:${sid}:${it.id}:label`, 'line', 'Level')}>${esc(it.label)}</span>` : viz}</div>`;
       }).join('');
     }
-    return `<section class="rz-sec k-${kind}" data-sid="${esc(sec.id)}"><h2 class="rz-h"><span>${esc(sec.title)}</span></h2><div class="rz-body">${body}</div></section>`;
+    const hicon = sec.icon && doc.settings.heading.icons ? `<span class="rz-h-ic" data-pick="section">${icon(sec.icon)}</span>` : '';
+    return `<section class="rz-sec k-${kind} t-${esc(sec.type)}" data-sid="${esc(sec.id)}"><h2 class="rz-h">${hicon}<span${fa(`S:${sid}:title`, 'line', 'Section title')}>${esc(sec.title)}</span></h2><div class="rz-body">${body}</div></section>`;
   }
 
   /* ---------- main entry ---------- */
-  function render(doc) {
+  function render(doc, o) {
+    const prev = EDIT; EDIT = !!(o && o.edit);
+    try { return renderInner(doc, o || {}); } finally { EDIT = prev; }
+  }
+  function renderInner(doc, o) {
     const s = doc.settings, c = s.colors, li = layoutInfo(doc);
     const fonts = Object.fromEntries(T.FONTS.map((f) => [f.name, f.stack]));
     const orgColor = { accent: 'var(--accent)', text: 'var(--text)', muted: 'var(--muted)' }[s.entries.orgColor];
@@ -252,11 +285,11 @@
     const headerMain = li.twoCol && s.header.in === 'main';
     const secs = (arr) => arr.map((x) => sectionHtml(x, doc)).join('');
     let html = '';
-    if (!headerMain) html += headerHtml(doc, li, 'top');
+    if (!headerMain && !o.noHeader) html += headerHtml(doc, li, 'top');
     html += '<div class="rz-cols">';
     // in a single column layout the sidebar sections follow the main ones
-    const mainList = li.twoCol ? li.mainSecs : li.mainSecs.concat(doc.sections.filter((x) => x.column === 'side' && x.items.length));
-    html += `<div class="rz-main">${headerMain ? headerHtml(doc, li, 'main') : ''}${secs(mainList)}</div>`;
+    const mainList = li.twoCol ? li.mainSecs : li.mainSecs.concat(doc.sections.filter((x) => x.column === 'side' && (EDIT || x.items.length)));
+    html += `<div class="rz-main">${headerMain && !o.noHeader ? headerHtml(doc, li, 'main') : ''}${secs(mainList)}</div>`;
     if (li.twoCol) {
       const filled = s.sidebarFilled ? ' filled' : '';
       const sideTop = headerMain ? photoHtml(doc) + (s.header.contactsIn === 'side' ? contactsHtml(doc, true) : '') : '';
@@ -266,5 +299,5 @@
     return `<div class="${cls.join(' ')}" style="${style}">${html}</div>`;
   }
 
-  return { render, pageBg, layoutInfo, esc, fmt, icon, ICONS, richText };
+  return { render, pageBg, layoutInfo, esc, fmt, icon, ICONS, richText, patternLayer, safeUrl };
 });
