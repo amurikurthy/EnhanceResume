@@ -350,3 +350,19 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .tb-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; transition: transform .1s, box-shadow .1s; }
 .tb-dot:hover { transform: scale(1.15); } .tb-dot.on { box-shadow: 0 0 0 2px var(--brand); transform: scale(1.12); }
 .panel .tb-selects { grid-template-columns: 1fr 1fr 1fr; }
+
+/* follow-my-edits highlights */
+.follow { outline: 2px solid var(--brand) !important; outline-offset: 1px; border-radius: 8px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 20%, transparent) !important; transition: box-shadow .2s, outline-color .2s; }
+.card.follow-card { border-left: 3px solid var(--brand) !important; }
+.sheet-edit .pv-hl { box-shadow: 0 0 0 2px #4f46e5 !important; background-color: rgba(79,70,229,.1) !important; }
+.follow-t { font-size: 12.5px; color: var(--muted); padding: 0 2px; }
+
+/* tidier rows and add buttons */
+.row .stack { flex: 1; min-width: 0; } .row .x { align-self: flex-start; margin-top: 3px; }
+.row.level { align-items: flex-start; } .row.level .grip { padding-top: 9px; }
+.row.level .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .row.level .lvl { margin: 4px 0 2px 2px; gap: 8px; }
+.row.bullet { align-items: flex-start; } .row.bullet textarea { padding: 7px 9px; line-height: 1.4; min-height: 36px; }
+.add-btn { align-self: flex-start; border: 1px dashed var(--zone-line); background: transparent; color: var(--brand); font-weight: 600; gap: 4px; margin-top: 2px; }
+.add-btn:hover { background: var(--brand-soft); border-color: var(--brand); }
+
+.tpl-apply { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; } .tpl-apply p { margin: 0; } .tpl-mode button { flex: 1; }

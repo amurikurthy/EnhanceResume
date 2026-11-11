@@ -622,6 +622,34 @@
     return next;
   }
 
+
+  /* Apply part of a template: 'all', 'layout' (layout, fonts, spacing, header/heading styles; keeps your colours)
+   * or 'colors' (colours and background pattern; keeps your layout). */
+  const COLOR_KEYS = ['colors', 'pattern'];
+  function applyTemplateParts(doc, id, parts) {
+    if (!parts || parts === 'all') return applyTemplate(doc, id);
+    const t = TEMPLATES.find((x) => x.id === id) || TEMPLATES[0];
+    const src = deepMerge(defaultSettings(), t.patch), next = clone(doc), cur = next.settings;
+    if (parts === 'layout') {
+      Object.keys(src).forEach((k) => { if (!COLOR_KEYS.includes(k) && k !== 'pageSize') cur[k] = clone(src[k]); });
+      cur.template = t.id;
+      if (cur.layout !== 'single') next.sections.forEach((s) => { s.column = t.side.includes(s.type) ? 'side' : 'main'; });
+      return next;
+    }
+    // colours: take the palette and background, then make sure the borrowed colours work with the current layout
+    const explicit = (t.patch && t.patch.colors) || {};
+    cur.colors = Object.assign({}, cur.colors, clone(src.colors));
+    cur.pattern = clone(src.pattern);
+    const c = cur.colors, dark = luminance(c.bg) < 0.25;
+    if (!explicit.headerBg) { c.headerBg = c.accent; c.headerText = luminance(c.accent) > 0.6 ? '#111111' : '#ffffff'; }
+    if (!explicit.sidebarBg) { // the source had no filled sidebar: derive one that reads well
+      c.sidebarBg = dark ? mix(c.bg, '#ffffff', 0.07) : cur.sidebarFilled ? mix(c.accent, '#000000', 0.6) : mix(c.accent, '#ffffff', 0.92);
+      c.sideText = dark || cur.sidebarFilled ? (dark ? c.text : '#ffffff') : c.text;
+      c.sideAccent = dark || cur.sidebarFilled ? mix(c.accent, '#ffffff', dark ? 0 : 0.55) : c.accent;
+    } else if (!explicit.sideText) { c.sideText = luminance(c.sidebarBg) < 0.4 ? '#ffffff' : c.text; }
+    return next;
+  }
+
   function applyPalette(settings, paletteId) {
     const p = PALETTES.find((x) => x.id === paletteId);
     if (!p) return settings;
@@ -718,6 +746,6 @@
     setProfile, resolveProfile, defaultSettings, normalizeDoc, newSection, newItem, applyTemplate, applyPalette, applyColorTheme, sampleDoc, blankDoc,
     ACCENT_GROUPS: [['Soft & floral', ['henna', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace']], ['Bold & technical', ['blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge']], ['Neutral', ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade']]],
     ACCENT_PATTERNS: ['arcs', 'traces', 'contour', 'nodemap', 'dotfade', 'linefade', 'floral', 'blossoms', 'swirl', 'scallop', 'wash', 'lace', 'blueprint', 'hex', 'chevrons', 'angular', 'compass', 'ridge', 'henna'],
-    deepMerge, clone, uid, mix, luminance,
+    applyTemplateParts, deepMerge, clone, uid, mix, luminance,
   };
 });

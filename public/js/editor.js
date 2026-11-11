@@ -179,6 +179,8 @@ export async function mountEditor(root, id) {
     content.innerHTML = R.render(d, { edit });
     needRepaint = false;
     measure();
+    const act = document.activeElement, pc = act && panelBody.contains(act) && act.closest('[data-fid]');
+    if (pc && edit) pageHighlight(pc.dataset.fid);
   }
   /* ----- page-aware layout: the preview mirrors the PDF's pagination (entries and bullets never split across a page) ----- */
   const PAGE_VOID = 28; // px of background shown between two sheets in the preview
@@ -331,7 +333,7 @@ export async function mountEditor(root, id) {
     const sec = doc.sections.find((x) => x.id === p[1]); if (!sec) return;
     if (k === 'S') { sec.title = val; return; }
     const it = sec.items.find((x) => x.id === p[2]); if (!it) return;
-    if (k === 'BL') it.bullets = val.length ? val : ['']; else if (k === 'B') it.bullets[+p[3]] = val; else if (k === 'T') it.tags[+p[3]] = val; else it[p[3]] = val;
+    if (k === 'BL') { it.bullets.length = 0; it.bullets.push(...(val.length ? val : [''])); } else if (k === 'B') it.bullets[+p[3]] = val; else if (k === 'T') it.tags[+p[3]] = val; else it[p[3]] = val;
   }
   const fieldOf = (n) => { const e = n && (n.nodeType === 1 ? n : n.parentElement); return e && e.closest ? e.closest('[data-f]') : null; };
 
@@ -478,17 +480,17 @@ export async function mountEditor(root, id) {
   /* ----- events on the editable page ----- */
   content.addEventListener('focusin', (e) => {
     const f = fieldOf(e.target);
-    if (f) showItemBar(f); else { itemBar.style.display = 'none'; }
+    if (f) { showItemBar(f); followField(f, true); } else { itemBar.style.display = 'none'; }
   });
   content.addEventListener('focusout', () => setTimeout(() => {
     const a = document.activeElement;
     if (content.contains(a) || floatLayer.contains(a) || (pickerEl && pickerEl.contains(a))) return;
-    hideFloats();
+    hideFloats(); clearFollow();
     if (needRepaint) { paintPreview(); softPanel(); }
   }, 0));
   content.addEventListener('input', (e) => {
     const f = fieldOf(e.target); if (!f) return;
-    applyField(f.dataset.f, readField(f)); touchLite();
+    const v = readField(f); applyField(f.dataset.f, v); touchLite(); syncPanelValue(f.dataset.f, v);
   });
   content.addEventListener('paste', (e) => {
     const f = fieldOf(e.target); if (!f) return;
@@ -520,6 +522,7 @@ export async function mountEditor(root, id) {
       if (!n) { const r = lv.getBoundingClientRect(); n = Math.max(0, Math.min(5, Math.round(((e.clientX - r.left) / r.width) * 5))); }
       it.level = it.level === n ? n - 1 : n; commit(); return;
     }
+    if (!fieldOf(e.target) && sec) followTo({ iid: it ? it.id : null, sid: sec.id }, {});
     const pick = e.target.closest('[data-pick]');
     if (pick && sec) {
       const kind = pick.dataset.pick;
@@ -549,6 +552,7 @@ export async function mountEditor(root, id) {
   function input(label, get, set, o = {}) {
     const el = h(o.area ? 'textarea' : 'input', { type: o.area ? null : 'text', value: get(), placeholder: o.ph || '', rows: o.rows || 3, maxlength: o.max || 300, class: o.area ? 'auto' : '' });
     el.addEventListener('input', () => { set(el.value); touch(); });
+    if (o.fid) el.dataset.fid = o.fid;
     return field(label, el, o.cls);
   }
   const getPath = (o, p) => p.split('.').reduce((a, k) => a[k], o);
@@ -657,24 +661,24 @@ export async function mountEditor(root, id) {
       const c = hd.contacts[i];
       const ic = h('select', { class: 'ic-sel' }, T.CONTACT_ICONS.map((n) => h('option', { value: n, selected: c.icon === n }, n)));
       ic.addEventListener('change', () => { c.icon = ic.value; touch(); });
-      const tx = h('input', { type: 'text', value: c.text, placeholder: 'Text', maxlength: 200 }); tx.addEventListener('input', () => { c.text = tx.value; touch(); });
+      const tx = h('input', { type: 'text', value: c.text, placeholder: 'Text', maxlength: 200 }); tx.dataset.fid = 'C:' + c.id; tx.addEventListener('input', () => { c.text = tx.value; touch(); });
       const lk = h('input', { type: 'text', value: c.link, placeholder: 'Link (optional)', maxlength: 300 }); lk.addEventListener('input', () => { c.link = lk.value; touch(); });
       return h('div', { class: 'row contact' }, grip(), ic, h('div', { class: 'stack' }, tx, lk), xBtn(() => { hd.contacts.splice(i, 1); redraw(); touch(); }));
     }, { group: 'contacts' });
     return h('div', { class: 'card hdr', id: 'hdr-card' },
       h('div', { class: 'card-h static' }, h('b', null, 'Header & contact')),
       h('div', { class: 'card-body' },
-        input('Full name', () => hd.name, (v) => { hd.name = v; }),
-        input('Job title', () => hd.title, (v) => { hd.title = v; }),
-        input('Tagline (optional)', () => hd.tagline, (v) => { hd.tagline = v; }),
+        input('Full name', () => hd.name, (v) => { hd.name = v; }, { fid: 'H:name' }),
+        input('Job title', () => hd.title, (v) => { hd.title = v; }, { fid: 'H:title' }),
+        input('Tagline (optional)', () => hd.tagline, (v) => { hd.tagline = v; }, { fid: 'H:tagline' }),
         photoBlock(hd, photoIn),
         h('div', { class: 'f-lbl' }, 'Contact details'), contacts,
-        h('button', { class: 'btn small', onclick: () => { if (hd.contacts.length < 10) { hd.contacts.push({ id: T.uid(), icon: 'link', text: '', link: '' }); contacts._redraw(); touch(); } } }, '+ Add contact')));
+        h('button', { class: 'btn small add-btn', onclick: () => { if (hd.contacts.length < 10) { hd.contacts.push({ id: T.uid(), icon: 'link', text: '', link: '' }); contacts._redraw(); touch(); } } }, '+ Add contact')));
   }
 
   /* ---------------- content: section bodies ---------------- */
-  function bulletsEditor(it) {
-    const box = h('div', { class: 'rows bullets' });
+  function bulletsEditor(sec, it) {
+    const box = h('div', { class: 'rows bullets', 'data-fid': `BL:${sec.id}:${it.id}` });
     sortList(box, it.bullets, (i, redraw) => {
       const ta = autosize(h('textarea', { rows: 1, maxlength: 1200, value: it.bullets[i], placeholder: 'Describe an achievement…' }));
       ta.addEventListener('input', () => { it.bullets[i] = ta.value; touch(); });
@@ -684,7 +688,7 @@ export async function mountEditor(root, id) {
       });
       return h('div', { class: 'row bullet' }, grip(), ta, xBtn(() => { it.bullets.splice(i, 1); redraw(); touch(); }));
     }, { group: 'bullets' });
-    return h('div', null, box, h('button', { class: 'btn small', onclick: () => { it.bullets.push(''); box._redraw(); touch(); box.lastChild.querySelector('textarea').focus(); } }, '+ Bullet'));
+    return h('div', null, box, h('button', { class: 'btn small add-btn', onclick: () => { it.bullets.push(''); box._redraw(); touch(); box.lastChild.querySelector('textarea').focus(); } }, '+ Bullet'));
   }
 
   function logoField(it) {
@@ -702,16 +706,16 @@ export async function mountEditor(root, id) {
     const name = h('span', { class: 'row-title' }, it.title || it.org || 'New entry');
     const upd = () => { name.textContent = it.title || it.org || 'New entry'; };
     const body = h('div', { class: 'card-body' },
-      input(lbl.title, () => it.title, (v) => { it.title = v; upd(); }),
-      input(lbl.org, () => it.org, (v) => { it.org = v; upd(); }),
+      input(lbl.title, () => it.title, (v) => { it.title = v; upd(); }, { fid: `E:${sec.id}:${it.id}:title` }),
+      input(lbl.org, () => it.org, (v) => { it.org = v; upd(); }, { fid: `E:${sec.id}:${it.id}:org` }),
       h('div', { class: 'two' },
-        input('Date', () => it.date, (v) => { it.date = v; }, { ph: '01/2022 - Present' }),
-        input('Location', () => it.location, (v) => { it.location = v; })),
+        input('Date', () => it.date, (v) => { it.date = v; }, { ph: '01/2022 - Present', fid: `E:${sec.id}:${it.id}:date` }),
+        input('Location', () => it.location, (v) => { it.location = v; }, { fid: `E:${sec.id}:${it.id}:location` })),
       input('Link (optional)', () => it.orgLink, (v) => { it.orgLink = v; }, { ph: 'https://' }),
       h('div', { class: 'logo-row' }, h('span', { class: 'f-lbl', style: { margin: 0 } }, 'Icon'), iconBtn(it.icon, (v) => { it.icon = v; touch(); drawPanel(); }, 'Icon shown beside this entry'), h('span', { class: 'muted small' }, 'or upload a logo:')),
       logoField(it),
-      input('Description (supports **bold**, *italic*, [link](url), "- " bullets)', () => it.text, (v) => { it.text = v; }, { area: true, rows: 2, max: 3000 }),
-      h('div', { class: 'f-lbl' }, 'Bullet points'), bulletsEditor(it));
+      input('Description (supports **bold**, *italic*, [link](url), "- " bullets)', () => it.text, (v) => { it.text = v; }, { area: true, rows: 2, max: 3000, fid: `E:${sec.id}:${it.id}:text` }),
+      h('div', { class: 'f-lbl' }, 'Bullet points'), bulletsEditor(sec, it));
     const isCol = collapsed.has(it.id);
     const row = h('div', { class: 'card entry' + (isCol ? ' folded' : ''), 'data-iid': it.id },
       h('div', { class: 'card-h' }, grip(), h('button', { class: 'fold', onclick: () => { row.classList.toggle('folded'); row.classList.contains('folded') ? collapsed.add(it.id) : collapsed.delete(it.id); } }, '▾'), name,
@@ -720,51 +724,51 @@ export async function mountEditor(root, id) {
     return row;
   }
 
-  function skillGroupRow(arr, i, redraw) {
+  function skillGroupRow(sec, arr, i, redraw) {
     const g = arr[i];
     const tags = h('div', { class: 'tags' });
     sortList(tags, g.tags, (j, rd) => {
-      const el = h('input', { type: 'text', value: g.tags[j], maxlength: 80, size: Math.max(3, g.tags[j].length + 1) });
+      const el = h('input', { type: 'text', value: g.tags[j], maxlength: 80, size: Math.max(3, g.tags[j].length + 1) }); el.dataset.fid = `T:${sec.id}:${g.id}:${j}`;
       el.addEventListener('input', () => { g.tags[j] = el.value; el.size = Math.max(3, el.value.length + 1); touch(); });
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); g.tags.splice(j + 1, 0, ''); rd(); touch(); tags.children[j + 1].querySelector('input').focus(); } if (e.key === 'Backspace' && !el.value && g.tags.length > 1) { e.preventDefault(); g.tags.splice(j, 1); rd(); touch(); const p = tags.children[Math.max(0, j - 1)]; if (p) p.querySelector('input').focus(); } });
       return h('span', { class: 'tag', title: 'Drag to reorder' }, el, h('button', { class: 'tx', type: 'button', onclick: () => { g.tags.splice(j, 1); rd(); touch(); } }, '×'));
     }, { group: 'tags', handle: '.tag' , filter: 'input' , preventOnFilter: false });
     return h('div', { class: 'card group', 'data-iid': g.id },
-      h('div', { class: 'card-h static' }, grip(), h('input', { class: 'bare', type: 'text', value: g.name, placeholder: 'Group name', maxlength: 80, oninput: (e) => { g.name = e.target.value; touch(); } }),
+      h('div', { class: 'card-h static' }, grip(), h('input', { class: 'bare', type: 'text', 'data-fid': `G:${sec.id}:${g.id}:name`, value: g.name, placeholder: 'Group name', maxlength: 80, oninput: (e) => { g.name = e.target.value; touch(); } }),
         xBtn(() => { arr.splice(i, 1); redraw(); touch(); }, 'Delete group')),
-      h('div', { class: 'card-body' }, tags, h('button', { class: 'btn small', onclick: () => { g.tags.push(''); tags._redraw(); touch(); tags.lastChild.querySelector('input').focus(); } }, '+ Item')));
+      h('div', { class: 'card-body' }, tags, h('button', { class: 'btn small add-btn', onclick: () => { g.tags.push(''); tags._redraw(); touch(); tags.lastChild.querySelector('input').focus(); } }, '+ Item')));
   }
 
   function listRow(sec, arr, i, redraw) {
     const it = arr[i];
     const ic = iconBtn(it.icon, (v) => { it.icon = v; touch(); redraw(); });
-    const t = h('input', { type: 'text', value: it.title, placeholder: 'Title', maxlength: 200 }); t.addEventListener('input', () => { it.title = t.value; touch(); });
-    const s = h('input', { type: 'text', value: it.sub, placeholder: 'Subtitle (optional)', maxlength: 200 }); s.addEventListener('input', () => { it.sub = s.value; touch(); });
+    const t = h('input', { type: 'text', value: it.title, placeholder: 'Title', maxlength: 200 }); t.dataset.fid = `L:${sec.id}:${it.id}:title`; t.addEventListener('input', () => { it.title = t.value; touch(); });
+    const s = h('input', { type: 'text', value: it.sub, placeholder: 'Subtitle (optional)', maxlength: 200 }); s.dataset.fid = `L:${sec.id}:${it.id}:sub`; s.addEventListener('input', () => { it.sub = s.value; touch(); });
     return h('div', { class: 'row contact' }, grip(), ic, h('div', { class: 'stack' }, t, s), xBtn(() => { arr.splice(i, 1); redraw(); touch(); }));
   }
 
   function levelRow(sec, arr, i, redraw) {
     const it = arr[i];
-    const n = h('input', { type: 'text', value: it.name, placeholder: 'Language', maxlength: 80 }); n.addEventListener('input', () => { it.name = n.value; touch(); });
-    const l = h('input', { type: 'text', value: it.label, placeholder: 'Level label (e.g. Native)', maxlength: 60 }); l.addEventListener('input', () => { it.label = l.value; touch(); });
+    const n = h('input', { type: 'text', value: it.name, placeholder: sec.type === 'expertise' ? 'Skill' : 'Language', maxlength: 80 }); n.dataset.fid = `V:${sec.id}:${it.id}:name`; n.addEventListener('input', () => { it.name = n.value; touch(); });
+    const l = h('input', { type: 'text', value: it.label, placeholder: 'Level (e.g. Native)', maxlength: 60 }); l.dataset.fid = `V:${sec.id}:${it.id}:label`; l.addEventListener('input', () => { it.label = l.value; touch(); });
     const dots = h('div', { class: 'lvl' });
     const dd = () => dots.replaceChildren(...[1, 2, 3, 4, 5].map((k) => h('button', { type: 'button', class: k <= it.level ? 'on' : '', onclick: () => { it.level = it.level === k ? k - 1 : k; touch(); dd(); } })));
     dd();
-    return h('div', { class: 'row contact' }, grip(), h('div', { class: 'stack' }, n, l, dots), xBtn(() => { arr.splice(i, 1); redraw(); touch(); }));
+    return h('div', { class: 'row level' }, grip(), h('div', { class: 'stack' }, h('div', { class: 'pair' }, n, l), dots), xBtn(() => { arr.splice(i, 1); redraw(); touch(); }));
   }
 
   function itemsEditor(sec) {
     const kind = T.SECTION_TYPES[sec.type].kind;
     if (kind === 'text') {
       if (!sec.items.length) sec.items.push(T.newItem(sec.type));
-      return input('Text (supports **bold**, *italic*, [link](url) and "- " bullets)', () => sec.items[0].text, (v) => { sec.items[0].text = v; }, { area: true, rows: 5, max: 6000 });
+      return input('Text (supports **bold**, *italic*, [link](url) and "- " bullets)', () => sec.items[0].text, (v) => { sec.items[0].text = v; }, { area: true, rows: 5, max: 6000, fid: `X:${sec.id}:${sec.items[0].id}:text` });
     }
     const box = h('div', { class: 'rows items kind-' + kind });
-    const renderers = { entries: entryRow, skills: (s, a, i, r) => skillGroupRow(a, i, r), list: listRow, levels: levelRow };
+    const renderers = { entries: entryRow, skills: (s, a, i, r) => skillGroupRow(s, a, i, r), list: listRow, levels: levelRow };
     const fn = renderers[kind];
     sortList(box, sec.items, (i, redraw) => fn(sec, sec.items, i, redraw), { group: 'items-' + kind });
     const label = { entries: '+ Add entry', skills: '+ Add group', list: '+ Add item', levels: '+ Add language' }[kind];
-    return h('div', null, box, h('button', { class: 'btn small primary-o', onclick: () => { sec.items.push(T.newItem(sec.type)); box._redraw(); touch(); } }, label));
+    return h('div', null, box, h('button', { class: 'btn small add-btn', onclick: () => { sec.items.push(T.newItem(sec.type)); box._redraw(); touch(); } }, label));
   }
 
   function sectionCard(sec) {
@@ -774,7 +778,7 @@ export async function mountEditor(root, id) {
       h('div', { class: 'card-h' }, grip(),
         h('button', { class: 'fold', onclick: () => { card.classList.toggle('folded'); card.classList.contains('folded') ? collapsed.add(sec.id) : collapsed.delete(sec.id); } }, '▾'),
         iconBtn(sec.icon, (v) => { sec.icon = v; touch(); drawPanel(); }, 'Section heading icon'),
-        h('input', { class: 'bare title', type: 'text', value: sec.title, maxlength: 80, oninput: (e) => { sec.title = e.target.value; touch(); } }),
+        h('input', { class: 'bare title', type: 'text', 'data-fid': `S:${sec.id}:title`, value: sec.title, maxlength: 80, oninput: (e) => { sec.title = e.target.value; touch(); } }),
         h('span', { class: 'chip-type' }, T.SECTION_TYPES[sec.type].label),
         twoCol ? h('button', { class: 'icon-btn', title: sec.column === 'side' ? 'Move to main column' : 'Move to sidebar', onclick: () => { sec.column = sec.column === 'side' ? 'main' : 'side'; touch(); drawPanel(); } }, sec.column === 'side' ? '◧' : '◨') : null,
         xBtn(async () => { if (await confirmDlg('Delete section', `Delete the “${sec.title}” section?`)) { doc.sections.splice(doc.sections.indexOf(sec), 1); touch(); drawPanel(); } }, 'Delete section')),
@@ -783,7 +787,9 @@ export async function mountEditor(root, id) {
   }
 
   function contentTab() {
-    const wrap = h('div', { class: 'tab-content' }, headerCard());
+    const cb = h('input', { type: 'checkbox', checked: follow });
+    cb.addEventListener('change', () => { follow = cb.checked; try { localStorage.setItem('er-follow', follow ? 'on' : 'off'); } catch { /* private mode */ } if (!follow) clearFollow(); });
+    const wrap = h('div', { class: 'tab-content' }, h('label', { class: 'check follow-t', title: 'Scroll to and highlight the matching control when you click on the page' }, cb, 'Sidebar follows what I edit on the page'), headerCard());
     const twoCol = S().layout !== 'single';
     const zones = twoCol ? [['main', 'Main column'], ['side', 'Sidebar']] : [['main', 'Sections']];
     const zoneEls = [];
@@ -1034,17 +1040,25 @@ export async function mountEditor(root, id) {
   }
 
   /* ---------------- templates tab ---------------- */
+  /* mix and match: take everything, only the layout & fonts, or only the colors & background from a template */
+  const TPL_MODES = [['all', 'Everything'], ['layout', 'Layout & fonts'], ['colors', 'Colors & background']];
+  const tplMode = () => { try { const m = localStorage.getItem('er-tpl-mode'); return TPL_MODES.some(([k]) => k === m) ? m : 'all'; } catch { return 'all'; } };
   function templatesTab() {
-    let browser;
-    browser = templateBrowser({
-      sampleFor: (t) => T.applyTemplate(doc, t.id), getCurrent: () => S().template, width: 120,
+    const mode = tplMode();
+    const note = { all: 'Switching templates keeps your text but resets all design options.',
+      layout: 'Takes the layout, fonts, spacing and styles from the template and keeps your colors.',
+      colors: 'Takes only the colors and background from the template and keeps your layout and fonts.' }[mode];
+    const picker = h('div', { class: 'seg tpl-mode' }, TPL_MODES.map(([m, l]) => h('button', { type: 'button', class: mode === m ? 'on' : '', onclick: () => { try { localStorage.setItem('er-tpl-mode', m); } catch { /* private mode */ } drawPanel(); } }, l)));
+    const browser = templateBrowser({
+      sampleFor: (t) => T.applyTemplateParts(doc, t.id, mode), getCurrent: () => S().template, width: 120,
       onPick: async (t) => {
-        if (S().template === t.id) return;
-        if (!(await confirmDlg('Apply template', 'This switches the design (layout, fonts, colors). Your content is kept.', 'Apply'))) return;
-        doc = T.applyTemplate(doc, t.id); touch(); drawPanel();
+        if (mode === 'all' && S().template === t.id) return;
+        const msg = { all: 'This switches the design (layout, fonts, colors). Your content is kept.', layout: `Use ${t.name}'s layout, fonts and spacing and keep your current colors?`, colors: `Use ${t.name}'s colors and background and keep your current layout?` }[mode];
+        if (!(await confirmDlg('Apply template', msg, 'Apply'))) return;
+        doc = T.applyTemplateParts(doc, t.id, mode); touch(); drawPanel();
       },
     });
-    return h('div', { class: 'tab-content' }, h('p', { class: 'muted pad' }, 'Previews use your own content. Switching templates keeps your text but resets design options.'), browser);
+    return h('div', { class: 'tab-content' }, h('div', { class: 'tpl-apply' }, h('div', { class: 'f-lbl' }, 'Apply from a template'), picker, h('p', { class: 'muted small' }, note + ' Previews show the result on your content.')), browser);
   }
 
   /* ---------------- version history drawer ---------------- */
@@ -1220,6 +1234,9 @@ export async function mountEditor(root, id) {
   /* run a command against the field/selection that was under the pointer when the menu opened */
   const withField = (f, range, fn) => { f.focus({ preventScroll: true }); if (range) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); } fn(); };
 
+  /* The menu is specific to what was clicked (innermost thing wins), so it stays short:
+   * selected text -> clipboard/formatting; a bullet; a skill; a section title or section area; an entry/group/item;
+   * the header or photo; otherwise (empty page) page-level actions. */
   function pageMenu(e) {
     const t = e.target, f = fieldOf(t);
     const secEl = t.closest('[data-sid]'), rowEl = t.closest('[data-iid]');
@@ -1227,11 +1244,13 @@ export async function mountEditor(root, id) {
     const kind = sec && kindOf(sec), two = S().layout !== 'single';
     const sel = getSelection(), hasSel = !!(f && sel && sel.rangeCount && !sel.isCollapsed && f.contains(sel.anchorNode));
     const range = hasSel ? sel.getRangeAt(0).cloneRange() : null;
-    const items = [];
-    if (f) {
-      if (hasSel) items.push({ label: 'Cut', icon: IC.cut, kbd: 'Ctrl+X', run: () => withField(f, range, () => document.execCommand('cut')) }, { label: 'Copy', icon: IC.copy, kbd: 'Ctrl+C', run: () => withField(f, range, () => document.execCommand('copy')) });
-      items.push({ label: 'Paste', icon: IC.paste, kbd: 'Ctrl+V', run: () => { if (range) { f.focus({ preventScroll: true }); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(range); } pasteInto(f); } });
-      if (hasSel && f.dataset.m !== 'line') {
+
+    // 1. selected text
+    if (hasSel) {
+      const items = [{ label: 'Cut', icon: IC.cut, kbd: 'Ctrl+X', run: () => withField(f, range, () => document.execCommand('cut')) },
+        { label: 'Copy', icon: IC.copy, kbd: 'Ctrl+C', run: () => withField(f, range, () => document.execCommand('copy')) },
+        { label: 'Paste', icon: IC.paste, kbd: 'Ctrl+V', run: () => { if (range) { f.focus({ preventScroll: true }); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(range); } pasteInto(f); } }];
+      if (f.dataset.m !== 'line') {
         const boldByDefault = Number(getComputedStyle(f).fontWeight) >= 600;
         items.push('-', ...(boldByDefault ? [] : [{ label: 'Bold', icon: IC.bold, kbd: 'Ctrl+B', run: () => withField(f, range, () => execFmt('bold')) }]),
           { label: 'Italic', icon: IC.italic, kbd: 'Ctrl+I', run: () => withField(f, range, () => execFmt('italic')) },
@@ -1239,62 +1258,58 @@ export async function mountEditor(root, id) {
           { label: 'Remove link', icon: IC.unlink, run: () => withField(f, range, () => execFmt('unlink')) },
           { label: 'Clear formatting', icon: IC.clear, run: () => withField(f, range, () => execFmt('removeFormat')) });
       }
-      items.push({ label: 'Select all', icon: IC.select, kbd: 'Ctrl+A', run: () => { f.focus({ preventScroll: true }); const r = document.createRange(); r.selectNodeContents(f); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } });
-      items.push('-');
+      return items;
     }
-    // bullets
+    // 2. a bullet
     const li = t.closest('li'), ul = li && li.closest('ul[data-f^="BL:"]');
     if (ul && it) {
       const i = Array.from(ul.children).indexOf(li);
-      items.push({ header: 'Bullet' },
-        { label: 'Add bullet below', icon: IC.plus, run: () => { it.bullets.splice(i + 1, 0, ''); commit(); focusBullet(sec, it, i + 1); } },
+      return [{ label: 'Add bullet below', icon: IC.plus, run: () => { it.bullets.splice(i + 1, 0, ''); commit(); focusBullet(sec, it, i + 1); } },
         { label: 'Move bullet up', icon: IC.up, disabled: i === 0, run: () => { const [b] = it.bullets.splice(i, 1); it.bullets.splice(i - 1, 0, b); commit(); focusBullet(sec, it, i - 1); } },
         { label: 'Move bullet down', icon: IC.down, disabled: i >= it.bullets.length - 1, run: () => { const [b] = it.bullets.splice(i, 1); it.bullets.splice(i + 1, 0, b); commit(); focusBullet(sec, it, i + 1); } },
-        { label: 'Delete bullet', icon: IC.trash, danger: true, run: () => { it.bullets.splice(i, 1); if (!it.bullets.length) it.bullets = ['']; commit(); focusBullet(sec, it, Math.max(0, i - 1)); } }, '-');
+        '-', { label: 'Delete bullet', icon: IC.trash, danger: true, run: () => { it.bullets.splice(i, 1); if (!it.bullets.length) it.bullets = ['']; commit(); focusBullet(sec, it, Math.max(0, i - 1)); } }];
     }
-    // skills
+    // 3. a skill chip
     const tag = t.closest('.rz-tag[data-f^="T:"]');
     if (tag && it) {
       const j = Number(tag.dataset.f.split(':')[3]);
-      items.push({ header: 'Skill' }, { label: 'Add skill after', icon: IC.plus, run: () => { it.tags.splice(j + 1, 0, ''); commit(`T:${sec.id}:${it.id}:${j + 1}`); } },
-        { label: 'Delete skill', icon: IC.trash, danger: true, run: () => { it.tags.splice(j, 1); if (!it.tags.length) it.tags = ['']; commit(); } }, '-');
+      return [{ label: 'Add skill after', icon: IC.plus, run: () => { it.tags.splice(j + 1, 0, ''); commit(`T:${sec.id}:${it.id}:${j + 1}`); } },
+        '-', { label: 'Delete skill', icon: IC.trash, danger: true, run: () => { it.tags.splice(j, 1); if (!it.tags.length) it.tags = ['']; commit(); } }];
     }
-    // the entry / group / list item under the pointer
+    // 4. a section title, or a spot in a section that is not inside an entry
+    const sectionMenu = () => [
+      { label: 'Move section up', icon: IC.up, run: () => moveSection(sec, -1) }, { label: 'Move section down', icon: IC.down, run: () => moveSection(sec, 1) },
+      two ? { label: sec.column === 'side' ? 'Move to main column' : 'Move to sidebar', icon: IC.cols, run: () => { sec.column = sec.column === 'side' ? 'main' : 'side'; commit(); } } : null,
+      { label: 'Section icon…', icon: IC.star, run: () => iconPicker(sec.icon, (v) => { sec.icon = v; commit(); }, secEl.querySelector('.rz-h')) },
+      { label: 'Duplicate section', icon: IC.copy, run: () => duplicateSection(sec) },
+      '-', { label: 'Delete section', icon: IC.trash, danger: true, run: () => deleteSection(sec) }];
+    if (sec && ((f && f.dataset.f.startsWith('S:')) || !it)) return sectionMenu();
+    // 5. an entry, group, list item or language
     if (sec && it && NEW_LABEL[kind]) {
       const L = NEW_LABEL[kind], i = idxOf(sec, it);
-      items.push({ header: L[0].toUpperCase() + L.slice(1) },
-        { label: `Add ${L} below`, icon: IC.plus, run: () => addItemAfter(sec, it) },
+      return [{ label: `Add ${L} below`, icon: IC.plus, run: () => addItemAfter(sec, it) },
         kind === 'entries' ? { label: 'Add bullet point', icon: IC.plus, run: () => { it.bullets.push(''); commit(); focusBullet(sec, it, it.bullets.length - 1); } } : null,
         kind === 'skills' ? { label: 'Add skill', icon: IC.plus, run: () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); } } : null,
         { label: `Duplicate ${L}`, icon: IC.copy, run: () => duplicateItem(sec, it) },
         { label: 'Move up', icon: IC.up, disabled: i === 0, run: () => moveItem(sec, it, -1) },
         { label: 'Move down', icon: IC.down, disabled: i >= sec.items.length - 1, run: () => moveItem(sec, it, 1) },
         kind === 'entries' || kind === 'list' ? { label: 'Choose icon…', icon: IC.star, run: () => iconPicker(it.icon, (v) => { it.icon = v; commit(); }, rowEl) } : null,
-        { label: `Delete ${L}`, icon: IC.trash, danger: true, run: () => deleteItem(sec, it) }, '-');
+        '-', { label: `Delete ${L}`, icon: IC.trash, danger: true, run: () => deleteItem(sec, it) }];
     }
-    // the section
-    if (sec) {
-      items.push({ header: `Section · ${sec.title || T.SECTION_TYPES[sec.type].label}` },
-        { label: 'Move section up', icon: IC.up, run: () => moveSection(sec, -1) }, { label: 'Move section down', icon: IC.down, run: () => moveSection(sec, 1) },
-        two ? { label: sec.column === 'side' ? 'Move to main column' : 'Move to sidebar', icon: IC.cols, run: () => { sec.column = sec.column === 'side' ? 'main' : 'side'; commit(); } } : null,
-        { label: 'Section icon…', icon: IC.star, run: () => iconPicker(sec.icon, (v) => { sec.icon = v; commit(); }, secEl.querySelector('.rz-h')) },
-        { label: 'Duplicate section', icon: IC.copy, run: () => duplicateSection(sec) },
-        { label: 'Edit in sidebar', icon: IC.sliders, run: () => gotoPanel(sec.id) },
-        { label: 'Delete section', icon: IC.trash, danger: true, run: () => deleteSection(sec) }, '-');
-    } else if (t.closest('.rz-header, .rz-side-top, img.rz-photo')) {
-      items.push({ header: 'Header' }, { label: 'Upload a custom photo…', icon: IC.camera, run: uploadPhoto },
+    if (sec) return sectionMenu(); // text sections (summary, custom text)
+    // 6. the header
+    if (t.closest('.rz-header, .rz-side-top, img.rz-photo')) {
+      return [{ label: 'Upload a custom photo…', icon: IC.camera, run: uploadPhoto },
         doc.header.photoMode !== 'profile' ? { label: 'Use my profile photo', icon: IC.camera, run: () => { doc.header.photoMode = 'profile'; commit(); } } : { label: 'Edit my profile photo…', icon: IC.camera, run: openProfile },
-        doc.header.photoMode !== 'none' ? { label: 'Hide photo', icon: IC.trash, danger: true, run: () => { doc.header.photoMode = 'none'; commit(); } } : null,
-        { label: 'Edit header in sidebar', icon: IC.sliders, run: () => gotoPanel(null) }, '-');
+        doc.header.photoMode !== 'none' ? { label: 'Hide photo', icon: IC.trash, danger: true, run: () => { doc.header.photoMode = 'none'; commit(); } } : null];
     }
-    // the page
-    items.push({ label: 'Add a section…', icon: IC.plus, run: openGallery }, { label: 'Arrange sections…', icon: IC.grid, run: openArrange },
+    // 7. empty page
+    return [{ label: 'Add a section…', icon: IC.plus, run: openGallery }, { label: 'Arrange sections…', icon: IC.grid, run: openArrange }, '-',
       { label: 'Undo', icon: IC.undo, kbd: 'Ctrl+Z', disabled: hi === 0, run: undo }, { label: 'Redo', icon: IC.redo, kbd: 'Ctrl+Shift+Z', disabled: hi >= hist.length - 1, run: redo },
-      { label: 'Version history', icon: IC.clock, run: () => toggleHistory(true) });
-    return items;
+      { label: 'Version history', icon: IC.clock, run: () => toggleHistory(true) }];
   }
-  content.addEventListener('contextmenu', (e) => {
-    if (previewDoc || e.shiftKey) return; // Shift + right-click keeps the browser's own menu (spell check, etc.)
+  stage.addEventListener('contextmenu', (e) => {
+    if (previewDoc || e.shiftKey || floatLayer.contains(e.target)) return; // Shift + right-click keeps the browser's own menu (spell check, etc.)
     e.preventDefault();
     ctxMenu(pageMenu(e), e.clientX, e.clientY);
   });
@@ -1329,10 +1344,65 @@ export async function mountEditor(root, id) {
     ctxMenu(items, e.clientX, e.clientY);
   }
 
+
+  /* ---------------- sidebar follows the page ---------------- */
+  let follow = (() => { try { return localStorage.getItem('er-follow') !== 'off'; } catch { return true; } })();
+  let followKey = '', lastFollow = null;
+  const cssId = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'));
+  function clearFollow() {
+    panelBody.querySelectorAll('.follow, .follow-card').forEach((x) => x.classList.remove('follow', 'follow-card'));
+    followKey = ''; lastFollow = null;
+  }
+  function scrollPanelTo(el) {
+    const pr = panelBody.getBoundingClientRect(), r = el.getBoundingClientRect();
+    panelBody.scrollTo({ top: Math.max(0, panelBody.scrollTop + (r.top - pr.top) - (pr.height / 2 - r.height / 2)), behavior: 'smooth' });
+  }
+  /* find the control for a page field, open its section/entry card, highlight it and scroll the sidebar to it */
+  function followTo(t, o = {}) {
+    if (!follow || previewDoc) return;
+    const key = t.fid || t.iid || t.sid || 'hdr';
+    if (key === followKey && tab === 'content' && o.scroll !== false) return;
+    if (tab !== 'content') { if (!o.switchTab) return; tab = 'content'; drawPanel(); }
+    panelBody.querySelectorAll('.follow, .follow-card').forEach((x) => x.classList.remove('follow', 'follow-card'));
+    followKey = key; lastFollow = t;
+    let el = t.fid && panelBody.querySelector(`[data-fid="${cssId(t.fid)}"]`);
+    if (!el && t.iid) el = panelBody.querySelector(`.card[data-iid="${cssId(t.iid)}"]`);
+    if (!el && t.sid) el = panelBody.querySelector(`.card.sec[data-sid="${cssId(t.sid)}"]`);
+    if (!el && t.header) el = panelBody.querySelector('#hdr-card');
+    if (!el) return;
+    [el.closest('.card.sec'), el.closest('.card.entry, .card.group')].forEach((c) => { if (c) { c.classList.remove('folded'); const cid = c.dataset.sid || c.dataset.iid; if (cid) collapsed.delete(cid); } });
+    el.classList.add('follow');
+    const card = el.closest('.card'); if (card) card.classList.add('follow-card');
+    if (o.scroll !== false) requestAnimationFrame(() => scrollPanelTo(el));
+  }
+  function followField(f, switchTab) {
+    const p = f.dataset.f.split(':');
+    followTo({ fid: f.dataset.f, sid: p[0] === 'H' || p[0] === 'C' ? null : p[1], iid: p[2] || null, header: p[0] === 'H' || p[0] === 'C' }, { switchTab });
+  }
+  /* typing on the page keeps the matching sidebar control in step */
+  function syncPanelValue(id, val) {
+    const el = panelBody.querySelector(`[data-fid="${cssId(id)}"]`);
+    if (!el) return;
+    if (el._redraw) { el._redraw(); return; }
+    if ('value' in el && el !== document.activeElement) el.value = val;
+  }
+  /* ...and focusing a sidebar control highlights the matching spot on the page */
+  function pageHighlight(fid) {
+    content.querySelectorAll('.pv-hl').forEach((x) => x.classList.remove('pv-hl'));
+    if (!fid) return;
+    const f = content.querySelector(`[data-f="${cssId(fid)}"]`);
+    if (!f) return;
+    f.classList.add('pv-hl');
+    const sr = stage.getBoundingClientRect(), r = f.getBoundingClientRect();
+    if (r.top < sr.top + 60 || r.bottom > sr.bottom - 60) stage.scrollTo({ top: stage.scrollTop + (r.top - sr.top) - sr.height / 3, behavior: 'smooth' });
+  }
+
   /* ---------------- shell ---------------- */
   const panelBody = h('div', { class: 'panel-body' });
   const tabs = h('div', { class: 'tabs' });
   panelBody.addEventListener('contextmenu', onPanelContext);
+  panelBody.addEventListener('focusin', (ev) => { if (!previewDoc) { const c = ev.target.closest('[data-fid]'); if (c) pageHighlight(c.dataset.fid); } });
+  panelBody.addEventListener('focusout', () => pageHighlight(null));
   const panelEl = h('aside', { class: 'panel' }, tabs, panelBody);
   const panelSplit = h('div', { class: 'splitter', title: 'Drag to resize · double-click to reset' });
   let lastTab = null;
@@ -1344,6 +1414,7 @@ export async function mountEditor(root, id) {
     panelBody.replaceChildren(tab === 'content' ? contentTab() : tab === 'design' ? designTab() : templatesTab());
     panelBody.scrollTop = top;
     panelBody.querySelectorAll('textarea.auto').forEach(autosize);
+    if (lastFollow && tab === 'content' && content.contains(document.activeElement)) { followKey = ''; followTo(lastFollow, { scroll: false }); }
   }
 
   const titleIn = h('input', { class: 'doc-title', type: 'text', value: title, maxlength: 100, 'aria-label': 'Resume name' });
