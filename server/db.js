@@ -30,6 +30,15 @@ db.exec(`
     updated_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_resumes_user ON resumes(user_id, updated_at DESC);
+  CREATE TABLE IF NOT EXISTS revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id TEXT NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    auto INTEGER NOT NULL DEFAULT 0,
+    data TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_revisions_resume ON revisions(resume_id, created_at DESC);
 `);
 
 // lightweight migrations for columns added after the first release

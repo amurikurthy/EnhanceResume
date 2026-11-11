@@ -42,6 +42,7 @@ export async function mountEditor(root, id) {
     const mod = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
     if (mod && key === 's') { e.preventDefault(); save(); return; }
     const t = e.target, typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    if (previewDoc) return;
     if (mod && !typing && key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
     if (mod && !typing && key === 'y') { e.preventDefault(); redo(); }
   };
@@ -88,16 +89,16 @@ export async function mountEditor(root, id) {
   };
 
   /* ---------------- undo / redo ---------------- */
-  const hist = [JSON.stringify(doc)];
+  const hist = [JSON.stringify(doc)], histTimes = [Date.now()], histDesc = [];
   let hi = 0, snapTimer = null, undoBtn = null, redoBtn = null;
   function syncUndo() { if (undoBtn) undoBtn.disabled = hi === 0; if (redoBtn) redoBtn.disabled = hi >= hist.length - 1; }
   function snapshot() {
     clearTimeout(snapTimer);
     const j = JSON.stringify(doc);
     if (j === hist[hi]) return;
-    hist.length = hi + 1; hist.push(j);
-    if (hist.length > 100) hist.shift();
-    hi = hist.length - 1; syncUndo();
+    hist.length = hi + 1; histTimes.length = hi + 1; histDesc.length = hi + 1; hist.push(j); histTimes.push(Date.now());
+    if (hist.length > 100) { hist.shift(); histTimes.shift(); histDesc.shift(); }
+    hi = hist.length - 1; syncUndo(); if (histOpen) drawHistory();
   }
   const scheduleSnapshot = () => { clearTimeout(snapTimer); snapTimer = setTimeout(snapshot, 500); };
   function jumpTo(i) {
@@ -129,27 +130,90 @@ export async function mountEditor(root, id) {
 
   function paintPreview() {
     hideFloats();
-    const s = S(), m = s.margins, [pw] = T.PAGE_MM[s.pageSize];
+    const d = curDoc(), m = d.settings.margins, [pw] = T.PAGE_MM[d.settings.pageSize], edit = !previewDoc;
     sheet.style.width = pw + 'mm';
     sheet.style.padding = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
-    bgEl.setAttribute('style', R.pageBg(doc, { edit: true }));
-    content.innerHTML = R.render(doc, { edit: true });
+    sheet.classList.toggle('sheet-edit', edit);
+    bgEl.setAttribute('style', R.pageBg(d, { edit }));
+    content.innerHTML = R.render(d, { edit });
     needRepaint = false;
     measure();
   }
+  /* ----- page-aware layout: the preview mirrors the PDF's pagination (entries and bullets never split across a page) ----- */
+  const curDoc = () => previewDoc || doc;
+  const pageGeom = () => {
+    const m = curDoc().settings.margins, [, ph] = T.PAGE_MM[curDoc().settings.pageSize];
+    const cap = (ph - m.top - m.bottom) * MM, gap = (m.top + m.bottom) * MM;
+    return { cap, gap, stride: cap + gap };
+  };
+  const ATOMS = '.rz-entry, .rz-sg, .rz-li, .rz-lv, .rz-text';
+  let spacers = [];
+  /* groups: [{top,bottom}] in content px with no page pushes applied. Returns the push (px) needed before each group. */
+  function planFlow(groups, g) {
+    let shift = 0, end = 0;
+    const pushes = groups.map((gr) => {
+      const t = gr.top + shift, b = gr.bottom + shift, ps = Math.floor((t + 1e-3) / g.stride) * g.stride;
+      let push = 0;
+      if (t - ps > g.cap + 0.5) push = ps + g.stride - t; // starts inside the margin gap between pages
+      else if (b > ps + g.cap + 0.5 && b - t <= g.cap) push = ps + g.stride - t; // would be cut by the page edge
+      if (push < 0.5) push = 0;
+      shift += push; end = Math.max(end, gr.bottom + shift);
+      return push;
+    });
+    return { pushes, end };
+  }
+  /* a section's unbreakable groups: heading + first block stay together (break-after: avoid), then each block */
+  function sectionGroups(sec, rel) {
+    const h2 = sec.querySelector(':scope > .rz-h'), body = sec.querySelector(':scope > .rz-body');
+    const atoms = Array.from(body.children).filter((c) => c.matches(ATOMS));
+    const first = atoms.shift();
+    const out = [{ el: h2, top: rel(h2)[0], bottom: rel(first || h2)[1] }];
+    atoms.forEach((a) => { const [t, b] = rel(a); out.push({ el: a, top: t, bottom: b }); });
+    return out;
+  }
+  const relTo = (base) => (el) => { const r = el.getBoundingClientRect(); return [(r.top - base) / zoom, (r.bottom - base) / zoom]; };
+  function layoutPages() {
+    spacers.forEach((e) => e.remove()); spacers = [];
+    const rel = relTo(content.getBoundingClientRect().top), g = pageGeom();
+    content.querySelectorAll('.rz-main, .rz-side').forEach((col) => {
+      const groups = [];
+      col.querySelectorAll(':scope > .rz-sec').forEach((sec) => groups.push(...sectionGroups(sec, rel)));
+      const { pushes } = planFlow(groups, g);
+      pushes.forEach((p, i) => {
+        if (!p) return;
+        const el = groups[i].el, sp = h(el.tagName === 'LI' ? 'li' : 'div', { class: 'pg-push', style: { height: p + 'px' } });
+        el.before(sp); spacers.push(sp);
+      });
+    });
+  }
+  /* geometry with no pushes, for the arrange map */
+  function sectionGeoms() {
+    spacers.forEach((e) => { e.style.display = 'none'; });
+    const rel = relTo(content.getBoundingClientRect().top), out = { secs: new Map() };
+    content.querySelectorAll('.rz-sec').forEach((sec) => {
+      const [t, b] = rel(sec);
+      out.secs.set(sec.dataset.sid, { h: b - t, groups: sectionGroups(sec, rel).map((x) => ({ top: x.top - t, bottom: x.bottom - t })) });
+    });
+    const size = (sel) => { const e = content.querySelector(sel); return e ? rel(e)[1] - rel(e)[0] : 0; };
+    out.header = size('.rz-header'); out.sideTop = size('.rz-side-top');
+    const cols = content.querySelector('.rz-cols'); out.colsTop = cols ? rel(cols)[0] : 0;
+    spacers.forEach((e) => { e.style.display = ''; });
+    return out;
+  }
   function measure() {
-    const s = S(), m = s.margins, [, ph] = T.PAGE_MM[s.pageSize];
-    const cap = (ph - m.top - m.bottom) * MM;
+    const m = curDoc().settings.margins, g = pageGeom();
+    applyZoom();
+    layoutPages();
     const hh = content.firstChild ? content.firstChild.offsetHeight : 0;
-    const pages = Math.max(1, Math.ceil((hh - 2) / cap));
-    sheet.style.minHeight = (m.top + m.bottom) * MM + pages * cap + 'px';
-    guides.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'guide', style: { top: m.top * MM + (i + 1) * cap + 'px' } }, h('span', null, `Page ${i + 2} starts (approx.)`))));
+    const pages = Math.max(1, Math.floor((hh - 0.5) / g.stride) + 1);
+    sheet.style.minHeight = pages * g.stride + 'px';
+    guides.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'page-band', style: { top: (i + 1) * g.stride - m.bottom * MM + 'px', height: g.gap + 'px' } }, h('span', null, `Page ${i + 2}`))));
     pagesEl.textContent = pages + (pages === 1 ? ' page' : ' pages');
     pagesEl.classList.toggle('warn', pages > 2);
     applyZoom();
   }
   function applyZoom() {
-    const pwPx = T.PAGE_MM[S().pageSize][0] * MM;
+    const pwPx = T.PAGE_MM[curDoc().settings.pageSize][0] * MM;
     if (zoomMode === 'fit') zoom = Math.min(1.25, Math.max(0.3, (stage.clientWidth - 40) / pwPx));
     scaler.style.transform = `scale(${zoom})`;
     zoomWrap.style.width = pwPx * zoom + 'px';
@@ -181,7 +245,7 @@ export async function mountEditor(root, id) {
     const el = content.querySelector(`[data-f="${id}"]`);
     if (!el) return;
     el.focus({ preventScroll: true });
-    const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    const r = document.createRange(); r.selectNodeContents(el.dataset.m === 'list' && el.lastElementChild ? el.lastElementChild : el); r.collapse(false);
     const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
     el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -193,6 +257,7 @@ export async function mountEditor(root, id) {
     const walk = (n) => {
       if (n.nodeType === 3) { out += n.nodeValue.replace(/\u00a0/g, ' ').replace(/\u200b/g, ''); return; }
       if (n.nodeType !== 1) return;
+      if (n.classList && n.classList.contains('pg-push')) return;
       const t = n.tagName;
       if (t === 'BR') { out += multi ? '\n' : ' '; return; }
       if (t === 'STRONG' || t === 'B') { out += '**'; n.childNodes.forEach(walk); out += '**'; return; }
@@ -206,7 +271,12 @@ export async function mountEditor(root, id) {
     out = out.replace(/\*\*\*\*/g, '');
     return multi ? out.replace(/\n{3,}/g, '\n\n').replace(/(^|\n)(- [^\n]*)\n\n(?=- )/g, '$1$2\n').replace(/\n+$/, '') : out.replace(/\s+/g, ' ').replace(/^\s+/, '');
   }
-  const readField = (el) => (el.dataset.m === 'line' ? el.textContent.replace(/ /g, ' ').replace(/\s+/g, ' ') : toMarkup(el, el.dataset.m === 'multi'));
+  function readList(el) {
+    const items = Array.from(el.querySelectorAll(':scope > li')).map((li) => toMarkup(li, false));
+    if (!items.length) { const t = toMarkup(el, false); return t ? [t] : ['']; }
+    return items;
+  }
+  const readField = (el) => (el.dataset.m === 'list' ? readList(el) : el.dataset.m === 'line' ? el.textContent.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ') : toMarkup(el, el.dataset.m === 'multi'));
   function applyField(id, val) {
     const p = id.split(':'), k = p[0];
     if (k === 'H') { doc.header[p[1]] = val; return; }
@@ -214,7 +284,7 @@ export async function mountEditor(root, id) {
     const sec = doc.sections.find((x) => x.id === p[1]); if (!sec) return;
     if (k === 'S') { sec.title = val; return; }
     const it = sec.items.find((x) => x.id === p[2]); if (!it) return;
-    if (k === 'B') it.bullets[+p[3]] = val; else if (k === 'T') it.tags[+p[3]] = val; else it[p[3]] = val;
+    if (k === 'BL') it.bullets = val.length ? val : ['']; else if (k === 'B') it.bullets[+p[3]] = val; else if (k === 'T') it.tags[+p[3]] = val; else it[p[3]] = val;
   }
   const fieldOf = (n) => { const e = n && (n.nodeType === 1 ? n : n.parentElement); return e && e.closest ? e.closest('[data-f]') : null; };
 
@@ -304,7 +374,7 @@ export async function mountEditor(root, id) {
       target = f.closest('[data-iid]');
       const kind = kindOf(sec);
       if (KIND_LABEL[kind]) btns.push(h('button', { type: 'button', class: 'fbtn add', onmousedown: (e) => e.preventDefault(), onclick: () => { const n = T.newItem(sec.type); sec.items.splice(sec.items.indexOf(it) + 1, 0, n); commit(firstField(sec, n)); } }, h('span', { html: SVG(ICO.plus) }), KIND_LABEL[kind]));
-      if (kind === 'entries') btns.push(ibtn('plus', 'Add bullet point', () => { it.bullets.push(''); commit(`B:${sec.id}:${it.id}:${it.bullets.length - 1}`); }, 'txt'));
+      if (kind === 'entries') btns.push(ibtn('plus', 'Add bullet point', () => { it.bullets.push(''); commit(`BL:${sec.id}:${it.id}`); }, 'txt'));
       if (kind === 'skills') btns.push(ibtn('plus', 'Add skill', () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); }, 'txt'));
       if (KIND_LABEL[kind]) btns.push(ibtn('up', 'Move up', () => moveItem(sec, it, -1)), ibtn('down', 'Move down', () => moveItem(sec, it, 1)), ibtn('copy', 'Duplicate', () => { const c = Object.assign(T.clone(it), { id: T.uid() }); sec.items.splice(sec.items.indexOf(it) + 1, 0, c); commit(firstField(sec, c)); }));
       if (kind === 'entries' || kind === 'list') { const ic = ibtn('star', 'Icon', () => iconPicker(it.icon, (v) => { it.icon = v; commit(f.dataset.f); }, ic)); btns.push(ic); }
@@ -377,6 +447,10 @@ export async function mountEditor(root, id) {
     const f = fieldOf(e.target); if (!f) return;
     e.preventDefault();
     let t = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (f.dataset.m === 'list') { // each pasted line becomes its own bullet
+      t.split(/\r?\n/).map((x) => x.replace(/^\s*[-•*]\s+/, '')).filter((x, i, a) => x || a.length === 1).forEach((line, i) => { if (i) document.execCommand('insertParagraph'); document.execCommand('insertText', false, line); });
+      return;
+    }
     if (f.dataset.m !== 'multi') t = t.replace(/\s*\n\s*/g, ' ');
     document.execCommand('insertText', false, t);
   });
@@ -387,8 +461,8 @@ export async function mountEditor(root, id) {
     if (mod && (key === 'y' || (key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
     if (e.key === 'Escape') { f.blur(); return; }
     const id = f.dataset.f, k = id[0];
-    if (e.key === 'Enter' && f.dataset.m !== 'multi') { e.preventDefault(); if (k === 'B' || k === 'T') addSibling(id); else f.blur(); return; }
-    if (e.key === 'Backspace' && (k === 'B' || k === 'T') && !f.textContent.length) { e.preventDefault(); removeSibling(id); }
+    if (e.key === 'Enter' && f.dataset.m !== 'multi' && f.dataset.m !== 'list') { e.preventDefault(); if (k === 'T') addSibling(id); else f.blur(); return; }
+    if (e.key === 'Backspace' && k === 'T' && !f.textContent.length) { e.preventDefault(); removeSibling(id); }
   });
   content.addEventListener('click', (e) => {
     const lv = e.target.closest('[data-lv]');
@@ -725,7 +799,7 @@ export async function mountEditor(root, id) {
         seg('Bullets', 'entries.bulletStyle', [['disc', '●'], ['square', '■'], ['dash', '—'], ['arrow', '›'], ['none', 'None']]),
         seg('Company color', 'entries.orgColor', [['accent', 'Accent'], ['text', 'Text'], ['muted', 'Muted']]), range('Entry title size', 'entries.titleSize', 8.5, 14, 0.1, 'pt'),
         toggle('Dashed dividers between entries', 'entries.dividers'),
-        seg('Skill style', 'skills.style', [['chips', 'Chips'], ['outline', 'Pills'], ['plain', 'Commas'], ['pipes', 'Pipes']]),
+        seg('Skill style', 'skills.style', [['chips', 'Chips'], ['outline', 'Pills'], ['plain', 'Commas'], ['pipes', 'Pipes']]), toggle('Stretch chips to fill each row', 'skills.fill'),
         seg('Language level', 'levels.style', [['dots', 'Dots'], ['bars', 'Bars'], ['text', 'Text']])));
   }
 
@@ -735,7 +809,16 @@ export async function mountEditor(root, id) {
     const d = { settings: T.clone(doc.settings), header: doc.header, sections: [sec] };
     d.settings.layout = 'single'; d.settings.sidebarFilled = false; d.settings.pattern.type = 'none';
     const inner = `<div class="rz-bg" style="${R.esc(R.pageBg(d))}"></div><div class="pv-pad">${R.render(d, { noHeader: true })}</div>`;
-    return h('div', { class: 'sec-pv' }, h('div', { class: 'sec-pv-in', html: inner }));
+    const inn = h('div', { class: 'sec-pv-in', html: inner });
+    const pv = h('div', { class: 'sec-pv', style: { background: doc.settings.colors.bg } }, inn);
+    // scale the preview so it always fills the card's width, and let the card grow with the content
+    new ResizeObserver(() => {
+      const k = pv.clientWidth / inn.offsetWidth;
+      if (!isFinite(k) || k <= 0) return;
+      inn.style.transform = `scale(${k})`;
+      pv.style.height = Math.max(96, Math.min(300, inn.offsetHeight * k)) + 'px';
+    }).observe(pv);
+    return pv;
   }
   function addSection(type) {
     const sec = T.newSection(type);
@@ -764,45 +847,71 @@ export async function mountEditor(root, id) {
   /* ---------------- arrange (page layout map) ---------------- */
   function openArrange() {
     hideFloats();
-    const s = S(), m = s.margins, [pw, ph] = T.PAGE_MM[s.pageSize];
-    const li = R.layoutInfo(doc), two = s.layout !== 'single';
-    const D = 400, cwPx = li.cw * MM, k = D / cwPx;
-    const gap = Math.max(5, s.sectionGap * MM * k), colGap = s.columnGap * MM * k;
-    const capD = (ph - m.top - m.bottom) * MM * k;
+    const s = S(), g = pageGeom(), li = R.layoutInfo(doc), two = s.layout !== 'single';
+    const geo = sectionGeoms();
+    const D = 400, k = D / (li.cw * MM);
+    const sg = s.sectionGap * MM, colGap = s.columnGap * MM * k;
     const mainW = two ? ((li.cw - s.columnGap) * s.columnRatio / 100) : li.cw, sideW = li.cw - s.columnGap - mainW;
-    const hOf = (sel) => { const e = content.querySelector(sel); return e ? e.offsetHeight : 0; };
-    const lockBox = (label, hgt) => h('div', { class: 'ar-box locked', style: { height: Math.max(34, hgt * k) + 'px', marginBottom: gap + 'px' } }, h('span', { html: SVG(ICO.lock) }), label);
-    const box = (sec) => h('div', { class: 'ar-box', 'data-sid': sec.id, style: { height: Math.max(34, hOf(`[data-sid="${sec.id}"]`) * k) + 'px', marginBottom: gap + 'px' } }, h('span', { class: 'ar-grip' }, '⋮⋮'), sec.title || T.SECTION_TYPES[sec.type].label);
-    const zone = (col, w) => h('div', { class: 'ar-zone', 'data-col': col, style: { width: w * MM * k + 'px' } });
     const headerInMain = two && s.header.in === 'main';
-    const zones = [];
+    const lockBox = (label, hgt) => h('div', { class: 'ar-box locked', style: { height: Math.max(30, hgt * k) + 'px' } }, h('span', { html: SVG(ICO.lock) }), label);
+    const box = (sec) => h('div', { class: 'ar-box', 'data-sid': sec.id }, h('span', { class: 'ar-grip' }, '⋮⋮'), sec.title || T.SECTION_TYPES[sec.type].label);
+    const zone = (col, w) => h('div', { class: 'ar-zone', 'data-col': col, style: { width: w * MM * k + 'px' } });
+    const zones = [], info = h('div', { class: 'ar-info' }), bands = h('div', { class: 'ar-lines' });
     const pageEl = h('div', { class: 'ar-page', style: { width: D + 'px' } });
-    const lines = h('div', { class: 'ar-lines' });
-    const info = h('div', { class: 'ar-info' });
-    if (!headerInMain) pageEl.append(lockBox('Header', hOf('.rz-header')));
+    const topBox = !headerInMain ? lockBox('Header', geo.header) : null;
+    if (topBox) pageEl.append(topBox);
     const cols = h('div', { class: 'ar-cols', style: { gap: colGap + 'px' } });
-    const mainZ = zone('main', two ? mainW : li.cw); zones.push(mainZ);
-    if (headerInMain) mainZ.append(lockBox('Header', hOf('.rz-header')));
+    const mainZ = zone('main', mainW); zones.push(mainZ);
+    const mainLock = headerInMain ? lockBox('Header', geo.header) : null;
+    if (mainLock) mainZ.append(mainLock);
     doc.sections.filter((x) => !two || x.column !== 'side').forEach((x) => mainZ.append(box(x)));
     cols.append(mainZ);
+    let sideLock = null;
     if (two) {
       const sideZ = zone('side', sideW); zones.push(sideZ);
-      if (headerInMain && hOf('.rz-side-top')) sideZ.append(lockBox('Photo & contact', hOf('.rz-side-top')));
+      if (headerInMain && geo.sideTop) { sideLock = lockBox('Photo & contact', geo.sideTop); sideZ.append(sideLock); }
       doc.sections.filter((x) => x.column === 'side').forEach((x) => sideZ.append(box(x)));
       cols.append(sideZ);
     }
-    pageEl.append(cols, lines);
+    pageEl.append(cols, bands);
+
+    /* lay the boxes out exactly like the real page: heights follow the sections and a section that would be cut by a page edge is pushed down */
     function refresh() {
-      const topH = !headerInMain ? (pageEl.querySelector(':scope > .ar-box') || { offsetHeight: 0 }).offsetHeight + gap : 0;
-      let colH = 0;
-      zones.forEach((z) => { let t = 0; z.querySelectorAll(':scope > .ar-box').forEach((b) => { t += b.offsetHeight + gap; }); colH = Math.max(colH, t); });
-      const total = topH + colH, pages = Math.max(1, Math.ceil((total - gap) / capD - 0.001));
-      cols.style.minHeight = Math.max(colH, 60) + 'px';
-      lines.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'ar-line', style: { top: (i + 1) * capD + 'px' } }, h('span', null, `Page ${i + 2}`))));
-      info.textContent = `Page 1 of ${pages}`;
+      let end = 0;
+      zones.forEach((z, zi) => {
+        const lock = z === mainZ ? mainLock : sideLock;
+        let y = headerInMain ? (lock ? geo.header + sg : 0) : geo.colsTop;
+        if (headerInMain && z !== mainZ) y = lock ? geo.sideTop + sg : 0;
+        if (lock) lock.style.marginBottom = sg * k + 'px';
+        const boxes = Array.from(z.querySelectorAll(':scope > .ar-box[data-sid]'));
+        const groups = [], spans = [];
+        boxes.forEach((b) => {
+          const gm = geo.secs.get(b.dataset.sid) || { h: 60, groups: [{ top: 0, bottom: 60 }] };
+          spans.push([groups.length, gm]);
+          gm.groups.forEach((x) => groups.push({ top: y + x.top, bottom: y + x.bottom }));
+          y += gm.h + sg;
+        });
+        const { pushes, end: e } = planFlow(groups, g);
+        let idx = 0;
+        boxes.forEach((b, i) => {
+          const [start, gm] = spans[i], n = gm.groups.length;
+          const first = pushes[start], inner = pushes.slice(start + 1, start + n).reduce((a, c) => a + c, 0);
+          b.style.marginTop = first * k + 'px'; b.style.marginBottom = Math.max(4, sg * k) + 'px';
+          b.style.height = Math.max(30, (gm.h + inner) * k) + 'px';
+          idx += n;
+        });
+        end = Math.max(end, e);
+      });
+      const pages = Math.max(1, Math.floor((end - 0.5) / g.stride) + 1);
+      const total = pages * g.stride - g.gap;
+      zones.forEach((z) => { z.style.minHeight = Math.max(80, (total - (headerInMain ? 0 : geo.colsTop)) * k) + 'px'; });
+      if (topBox) topBox.style.marginBottom = Math.max(0, geo.colsTop - geo.header) * k + 'px';
+      bands.replaceChildren(...Array.from({ length: pages - 1 }, (_, i) => h('div', { class: 'ar-band', style: { top: 10 + ((i + 1) * g.stride - g.gap) * k + 'px', height: Math.max(6, g.gap * k) + 'px' } }, h('span', null, `Page ${i + 2}`))));
+      info.textContent = `${pages} ${pages === 1 ? 'page' : 'pages'}`;
     }
     zones.forEach((z) => Sortable.create(z, {
-      group: 'arrange', animation: 160, draggable: '.ar-box:not(.locked)', ghostClass: 'drag-ghost', chosenClass: 'drag-chosen', fallbackOnBody: true, swapThreshold: 0.65,
+      group: 'arrange', animation: 160, draggable: '.ar-box:not(.locked)', ghostClass: 'drag-ghost', chosenClass: 'drag-chosen', fallbackOnBody: true,
+      direction: 'vertical', swapThreshold: 0.5, invertSwap: true, invertedSwapThreshold: 0.4, emptyInsertThreshold: 90,
       onEnd: () => {
         const byId = new Map(doc.sections.map((x) => [x.id, x]));
         const next = [];
@@ -811,7 +920,9 @@ export async function mountEditor(root, id) {
       },
     }));
     const before = JSON.stringify(doc.sections.map((x) => [x.id, x.column]));
-    modal('Hold & drag the boxes to rearrange the sections', h('div', { class: 'arrange' }, info, pageEl, !two ? h('p', { class: 'muted center small' }, 'Tip: choose a two-column layout in Design to also move sections between columns.') : null),
+    modal('Hold & drag the boxes to rearrange the sections', h('div', { class: 'arrange' }, info, pageEl,
+      h('p', { class: 'muted center small' }, 'Drop a box anywhere in a column. Red bands are page breaks; sections that would be cut are moved to the next page, just like the PDF.'),
+      !two ? h('p', { class: 'muted center small' }, 'Tip: choose a two-column layout in Design to also move sections between columns.') : null),
       [{ label: 'Continue editing', value: true, kind: 'primary' }]).then(() => {
       if (JSON.stringify(doc.sections.map((x) => [x.id, x.column])) !== before) commit();
     });
@@ -830,9 +941,126 @@ export async function mountEditor(root, id) {
     return h('div', { class: 'tab-content' }, h('p', { class: 'muted pad' }, 'Previews use your own content. Switching templates keeps your text but resets design options.'), grid);
   }
 
+  /* ---------------- version history drawer ---------------- */
+  const SETTING_GROUP = { layout: 'layout', sidebarFilled: 'layout', columnRatio: 'layout', columnGap: 'layout', pageSize: 'page size', margins: 'spacing', sectionGap: 'spacing', entryGap: 'spacing',
+    fontHeading: 'fonts', fontBody: 'fonts', fontSize: 'fonts', lineHeight: 'fonts', colors: 'colors', pattern: 'background', header: 'header style', contactIcons: 'header style',
+    heading: 'headings', entries: 'entries', skills: 'skills', levels: 'languages', template: 'template' };
+  function describe(aJson, bJson) {
+    const a = JSON.parse(aJson), b = JSON.parse(bJson), out = [];
+    ['name', 'title', 'tagline'].forEach((k) => { if (a.header[k] !== b.header[k]) out.push(`Edited ${k}`); });
+    if (a.header.photo !== b.header.photo) out.push(b.header.photo ? 'Changed photo' : 'Removed photo');
+    if (JSON.stringify(a.header.contacts) !== JSON.stringify(b.header.contacts)) out.push('Edited contact details');
+    const groups = new Set();
+    Object.keys(b.settings).forEach((k) => { if (JSON.stringify(a.settings[k]) !== JSON.stringify(b.settings[k])) groups.add(SETTING_GROUP[k] || k); });
+    if (groups.size) out.push('Design: ' + [...groups].join(', '));
+    const ma = new Map(a.sections.map((x) => [x.id, x]));
+    b.sections.forEach((x) => {
+      const o = ma.get(x.id);
+      if (!o) out.push(`Added “${x.title}”`);
+      else if (JSON.stringify(o.items) !== JSON.stringify(x.items)) out.push(`Edited “${x.title}”`);
+      else if (o.title !== x.title) out.push(`Renamed “${o.title}”`);
+      else if (o.column !== x.column || o.icon !== x.icon) out.push(`Changed “${x.title}”`);
+    });
+    a.sections.forEach((x) => { if (!b.sections.find((y) => y.id === x.id)) out.push(`Removed “${x.title}”`); });
+    const ia = a.sections.map((x) => x.id).filter((i) => b.sections.some((y) => y.id === i)), ib = b.sections.map((x) => x.id).filter((i) => a.sections.some((y) => y.id === i));
+    if (ia.join() !== ib.join()) out.push('Reordered sections');
+    return out;
+  }
+  const brief = (list, n = 2) => (list.length ? list.slice(0, n).join(' · ') + (list.length > n ? ` · +${list.length - n} more` : '') : 'No visible changes');
+  const ago = (t) => {
+    const d = (Date.now() - t) / 1000;
+    if (d < 45) return 'just now'; if (d < 3600) return Math.round(d / 60) + ' min ago'; if (d < 86400) return Math.round(d / 3600) + ' h ago';
+    return new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+  const full = (t) => new Date(t).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+  let previewDoc = null, previewRev = null, revisions = [], histOpen = false;
+  const histBody = h('div', { class: 'hist-body' });
+  const histPanel = h('aside', { class: 'history' }, h('div', { class: 'hist-h' }, h('b', null, 'Version history'), h('button', { class: 'icon-btn', title: 'Close', onclick: () => toggleHistory(false), html: SVG('<path d="M18 6L6 18M6 6l12 12"/>') })), histBody);
+  const histSplit = h('div', { class: 'splitter right', title: 'Drag to resize · double-click to reset' });
+  const banner = h('div', { class: 'preview-banner' });
+
+  async function loadRevisions() {
+    try { revisions = await api.get(`/api/resumes/${id}/revisions`); } catch { revisions = []; }
+    if (histOpen) drawHistory();
+  }
+  function toggleHistory(open = !histOpen) {
+    histOpen = open;
+    histPanel.style.display = histSplit.style.display = open ? '' : 'none';
+    if (open) { loadRevisions(); drawHistory(); } else exitPreview();
+    setTimeout(applyZoom, 30);
+  }
+  async function askName(title, initial = '') {
+    const inp = h('input', { type: 'text', value: initial, maxlength: 80, placeholder: 'e.g. Sent to Acme' });
+    const ok = await modal(title, h('label', null, 'Name', inp), [{ label: 'Cancel', value: false }, { label: 'Save', value: true, kind: 'primary' }]);
+    return ok ? inp.value.trim() : null;
+  }
+  async function saveVersion(label) {
+    dirty = true; await save();
+    while (saving) await new Promise((r) => setTimeout(r, 40));
+    try { await api.post(`/api/resumes/${id}/revisions`, { label }); toast('Version saved'); loadRevisions(); } catch (e) { toast(e.message, 'err'); }
+  }
+  async function previewRevision(rev) {
+    try {
+      const r = await api.get(`/api/resumes/${id}/revisions/${rev.id}`);
+      previewDoc = T.normalizeDoc(r.data); previewRev = rev;
+      const changes = describe(JSON.stringify(previewDoc), JSON.stringify(doc));
+      banner.replaceChildren(h('div', { class: 'pb-t' }, h('b', null, `Previewing ${rev.label || 'restore point'}`), h('small', null, `${full(rev.created_at)} · to get back to now: ${brief(changes, 3)}`)),
+        h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: () => restoreRevision(rev) }, 'Restore this version')));
+      stage.classList.add('previewing'); panelEl.classList.add('locked');
+      hideFloats(); paintPreview(); drawHistory();
+      stage.scrollTo({ top: 0 });
+    } catch (e) { toast(e.message, 'err'); }
+  }
+  function exitPreview() {
+    if (!previewDoc) return;
+    previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
+    paintPreview(); if (histOpen) drawHistory();
+  }
+  async function restoreRevision(rev) {
+    if (!(await confirmDlg('Restore this version', 'Your current resume is saved as a restore point first, so you can undo this.', 'Restore'))) return;
+    try {
+      dirty = true; await save(); while (saving) await new Promise((r) => setTimeout(r, 40));
+      snapshot();
+      const r = await api.post(`/api/resumes/${id}/revisions/${rev.id}/restore`);
+      previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
+      doc = T.normalizeDoc(r.data); dirty = false; setStatus('All changes saved');
+      snapshot(); hideFloats(); paintPreview(); drawPanel(); loadRevisions(); toast('Version restored');
+    } catch (e) { toast(e.message, 'err'); }
+  }
+  function drawHistory() {
+    const nameIn = h('input', { type: 'text', placeholder: 'Name this version…', maxlength: 80 });
+    const doSave = () => { const v = nameIn.value.trim(); nameIn.value = ''; saveVersion(v || 'Saved version'); };
+    nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSave(); });
+    const revRow = (rev) => h('li', { class: 'rev' + (previewRev && previewRev.id === rev.id ? ' on' : ''), onclick: () => previewRevision(rev) },
+      h('span', { class: 'dot' + (rev.auto ? ' auto' : '') }),
+      h('div', { class: 'rev-t' }, h('b', null, rev.auto ? (rev.label || 'Automatic restore point') : rev.label), h('small', { title: full(rev.created_at) }, ago(rev.created_at))),
+      h('div', { class: 'rev-a' },
+        h('button', { class: 'icon-btn', title: 'Restore', onclick: (e) => { e.stopPropagation(); restoreRevision(rev); }, html: SVG(ICO.undo) }),
+        h('button', { class: 'icon-btn', title: 'Name this version', onclick: async (e) => { e.stopPropagation(); const n = await askName('Name this version', rev.auto ? '' : rev.label); if (n) { await api.patch(`/api/resumes/${id}/revisions/${rev.id}`, { label: n }); loadRevisions(); } }, html: SVG(ICO.pen || '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>') }),
+        h('button', { class: 'icon-btn x', title: 'Delete', onclick: async (e) => { e.stopPropagation(); if (await confirmDlg('Delete version', 'Delete this saved version?')) { await api.del(`/api/resumes/${id}/revisions/${rev.id}`); if (previewRev && previewRev.id === rev.id) exitPreview(); loadRevisions(); } }, html: SVG(ICO.trash) })));
+    // this session: undo steps, newest first
+    const steps = [];
+    for (let i = hist.length - 1; i >= 1; i--) {
+      if (!histDesc[i]) histDesc[i] = describe(hist[i - 1], hist[i]);
+      steps.push(h('li', { class: 'rev step' + (i === hi && !previewDoc ? ' on' : ''), onclick: () => { exitPreview(); jumpTo(i); drawHistory(); } },
+        h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, brief(histDesc[i], 2)), h('small', { title: full(histTimes[i]) }, ago(histTimes[i])))));
+    }
+    steps.push(h('li', { class: 'rev step' + (hi === 0 && !previewDoc ? ' on' : ''), onclick: () => { exitPreview(); jumpTo(0); drawHistory(); } }, h('span', { class: 'dot step' }), h('div', { class: 'rev-t' }, h('b', null, 'Opened this resume'), h('small', null, ago(histTimes[0])))));
+    histBody.replaceChildren(...[
+      h('div', { class: 'hist-save' }, nameIn, h('button', { class: 'btn primary small', onclick: doSave }, 'Save version')),
+      h('p', { class: 'muted small' }, 'Versions are kept on the server. A restore point is also saved automatically after you pause editing.'),
+      h('h4', null, 'Saved versions'),
+      h('ul', { class: 'rev-list' }, h('li', { class: 'rev' + (!previewDoc ? ' on' : ''), onclick: exitPreview }, h('span', { class: 'dot now' }), h('div', { class: 'rev-t' }, h('b', null, 'Current version'), h('small', null, dirty ? 'Unsaved changes…' : 'Up to date'))), revisions.map(revRow)),
+      !revisions.length ? h('p', { class: 'muted small' }, 'No saved versions yet.') : [],
+      h('h4', null, 'This session'), h('ul', { class: 'rev-list' }, steps)].flat().filter(Boolean));
+  }
+
   /* ---------------- shell ---------------- */
   const panelBody = h('div', { class: 'panel-body' });
   const tabs = h('div', { class: 'tabs' });
+  const panelEl = h('aside', { class: 'panel' }, tabs, panelBody);
+  const panelSplit = h('div', { class: 'splitter', title: 'Drag to resize · double-click to reset' });
   function drawPanel() {
     const top = panelBody.scrollTop;
     tabs.replaceChildren(...[['content', 'Content'], ['design', 'Design'], ['templates', 'Templates']].map(([k, l]) => h('button', { class: tab === k ? 'on' : '', onclick: () => { tab = k; drawPanel(); } }, l)));
@@ -862,13 +1090,31 @@ export async function mountEditor(root, id) {
   syncUndo();
   bar.querySelector('.spacer').after(
     h('div', { class: 'tb-group' }, undoBtn, redoBtn),
-    h('button', { class: 'btn', onclick: openGallery }, h('span', { html: SVG(ICO.plus) }), 'Section'),
-    h('button', { class: 'btn', onclick: openArrange }, h('span', { html: SVG(ICO.grid) }), 'Arrange'),
+    h('button', { class: 'btn', title: 'Add a section', 'aria-label': 'Add a section', onclick: openGallery }, h('span', { html: SVG(ICO.plus) }), h('span', { class: 'lbl' }, 'Section')),
+    h('button', { class: 'btn', title: 'Arrange sections', 'aria-label': 'Arrange sections', onclick: openArrange }, h('span', { html: SVG(ICO.grid) }), h('span', { class: 'lbl' }, 'Arrange')),
+    h('button', { class: 'btn', title: 'Version history', 'aria-label': 'Version history', onclick: () => toggleHistory() }, h('span', { html: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>') }), h('span', { class: 'lbl' }, 'History')),
     pagesEl, h('div', { class: 'zoom' }, h('button', { class: 'icon-btn', onclick: () => setZoom(zoom - 0.1) }, '−'), zoomLabel,
       h('button', { class: 'icon-btn', onclick: () => setZoom(zoom + 0.1) }, '+'), h('button', { class: 'btn small', onclick: () => { zoomMode = 'fit'; applyZoom(); } }, 'Fit')), pdfBtn);
 
   root.replaceChildren(h('div', { class: 'editor' }, bar,
-    h('div', { class: 'ed-main' }, h('aside', { class: 'panel' }, tabs, panelBody), stage)));
+    h('div', { class: 'ed-main' }, panelEl, panelSplit, h('div', { class: 'stage-wrap' }, banner, stage), histSplit, histPanel)));
+  histPanel.style.display = histSplit.style.display = 'none';
+  // resizable side panels (widths are remembered)
+  const lsGet = (k, d) => { try { return Number(localStorage.getItem(k)) || d; } catch { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, String(v)); } catch { /* private mode */ } };
+  function splitter(handle, el, key, def, min, max, fromRight) {
+    el.style.width = lsGet(key, def) + 'px';
+    handle.addEventListener('dblclick', () => { el.style.width = def + 'px'; lsSet(key, def); setTimeout(applyZoom, 0); });
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); handle.classList.add('drag'); document.body.classList.add('resizing');
+      const startX = e.clientX, startW = el.offsetWidth;
+      const move = (ev) => { const dx = fromRight ? startX - ev.clientX : ev.clientX - startX; el.style.width = Math.max(min, Math.min(max(), startW + dx)) + 'px'; applyZoom(); positionBars(); };
+      const up = () => { handle.releasePointerCapture(e.pointerId); handle.classList.remove('drag'); document.body.classList.remove('resizing'); lsSet(key, el.offsetWidth); handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', up); };
+      handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', up);
+    });
+  }
+  splitter(panelSplit, panelEl, 'er-panel-w', 440, 300, () => innerWidth * 0.62, false);
+  splitter(histSplit, histPanel, 'er-hist-w', 340, 260, () => innerWidth * 0.5, true);
   drawPanel();
   requestAnimationFrame(paintPreview);
 

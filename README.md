@@ -1,6 +1,6 @@
 # EnhanceResume
 
-A self-hosted, multi-tenant resume builder with live preview, drag & drop editing, 10 templates, full design control and server-side PDF export. Ships as a single Docker container.
+A self-hosted, multi-tenant resume builder with live preview, drag & drop editing, 18 templates, full design control and server-side PDF export. Ships as a single Docker container.
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
@@ -124,12 +124,14 @@ The group claim comes from Authentik's `profile` scope mapping; if admin promoti
 
 ## Features
 
-- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose, Midnight Dark, Charcoal Gold – previewed with your own content.
+- **Templates**: Classic Duo, Modern Sidebar, Executive Serif, Bold Banner, Minimal Plain, Compact Pro, Creative Teal, Elegant Rose, Midnight Dark, Charcoal Gold, Circuit Board, Network Ops, Academic CV, Sunset Bold, Slate Modern, Forest Dark, Plum Pro, Ink & Paper – previewed with your own content.
 - **Dark mode**: the app UI follows your system setting with a toggle (☾/☀) in the top bar. Resumes have their own light & dark themes (Midnight, Charcoal, Forest, Plum, Paper, Mist) plus 12 accent colors, applied from the Design tab.
 - **Photos**: upload a profile photo (auto square-cropped) from *Header & contact*; choose circle / rounded / square, left or right, and size in *Design → Header*, or hide it.
 - **Edit right on the page**: click any text on the resume to type in place. A floating toolbar adds entries, bullets and skills, moves, duplicates, deletes and sets icons; selecting text offers bold, italic and links. Undo/redo (Ctrl+Z / Ctrl+Shift+Z) covers every change. The sidebar and the page scroll independently.
 - **Add-section gallery**: 20+ section types (summary, custom, training, projects, key achievements, industry expertise, find me online, awards, references, my life philosophy, …) previewed in your current design, with a list of sections you already use.
-- **Arrange view**: a page map of your sections with page-break markers; drag boxes to reorder them or move them between columns.
+- **Arrange view**: a page map that mirrors the PDF's pagination (sections that would be cut move to the next page). Drop a box anywhere in a column to place it.
+- **Version history**: a drawer with named versions and automatic restore points (kept on the server), previews that show the old version on the page, one-click restore (the current state is saved first), and a per-session list of recent edits you can jump back to.
+- **Resizable panes**: drag the divider between the tools and the page (double-click to reset); widths are remembered.
 - **Icons**: pick an icon for any section heading, experience/education entry, or list item (or upload a logo instead).
 - **Drag & drop**: reorder sections, move them between main column and sidebar, reorder entries, bullets, skill groups, skills/tags, contacts.
 - **Sections**: summary, experience, education, projects, volunteering, publications, skills (chips/pills/commas/pipes), certifications (with icons), achievements, interests, languages (dots/bars/text), custom text. Entries support logos, links, `**bold**`/`*italic*` markup.

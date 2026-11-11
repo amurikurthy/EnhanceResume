@@ -86,8 +86,8 @@
 .rz-sg { margin-bottom: 2.6mm; break-inside: avoid; }
 .rz-sg:last-child { margin-bottom: 0; }
 .rz-sg-name { font: 700 1em/1.2 var(--font-h); color: var(--accent); margin-bottom: 1.6mm; }
-.rz-tags { display: flex; flex-wrap: wrap; gap: 1.6mm; }
-.sk-chips .rz-tag { border: .3mm solid var(--chip-border); background: var(--chip-bg); padding: .9mm 2.6mm; font-weight: 600; border-radius: .6mm; }
+.rz-tags { display: flex; flex-wrap: wrap; gap: 1.3mm; }
+.sk-chips .rz-tag { border: .3mm solid var(--chip-border); background: var(--chip-bg); padding: .8mm 2.2mm; font-weight: 600; border-radius: .6mm; }
 .sk-outline .rz-tag { border: .3mm solid var(--accent); border-radius: 5mm; padding: .7mm 2.8mm; }
 .sk-plain .rz-tags, .sk-pipes .rz-tags { display: block; }
 .sk-plain .rz-tag, .sk-pipes .rz-tag { display: inline; }
@@ -125,3 +125,6 @@
 .rz-slider { position: relative; display: block; height: 1.4mm; background: var(--line); border-radius: 1mm; margin: 1.4mm 1.4mm 0 0; }
 .rz-slider i { display: block; height: 100%; background: var(--accent); border-radius: 1mm; }
 .rz-slider b { position: absolute; top: 50%; width: 3mm; height: 3mm; margin: -1.5mm 0 0 -1.5mm; border-radius: 50%; background: var(--heading); }
+
+/* chips stretch to use the full row, so narrow columns have no ragged gaps */
+.sk-fill.sk-chips .rz-tag, .sk-fill.sk-outline .rz-tag { flex: 1 1 auto; text-align: center; }

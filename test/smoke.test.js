@@ -45,3 +45,29 @@ test('sanitises hostile content', async () => {
   assert.ok(!/<script|<img src=x|javascript:/i.test(html));
   assert.equal(doc.settings.fontBody, 'Inter');
 });
+
+test('revision history: named versions, auto restore points, restore, tenant isolation', async () => {
+  const a = await signup('rev-a@example.com'), b = await signup('rev-b@example.com');
+  const r = await (await call('POST', '/api/resumes', { title: 'R', blank: true }, a)).json();
+  const edit = async (name) => { const cur = await (await call('GET', '/api/resumes/' + r.id, null, a)).json(); cur.data.header.name = name; assert.equal((await call('PUT', '/api/resumes/' + r.id, { data: cur.data }, a)).status, 200); };
+  await edit('First');
+  const v1 = await (await call('POST', `/api/resumes/${r.id}/revisions`, { label: 'Before layout change' }, a)).json();
+  assert.equal(v1.label, 'Before layout change'); assert.equal(v1.auto, false);
+  await edit('Second');
+  const list = await (await call('GET', `/api/resumes/${r.id}/revisions`, null, a)).json();
+  assert.ok(list.some((x) => x.id === v1.id));
+  assert.equal((await call('GET', `/api/resumes/${r.id}/revisions`, null, b)).status, 404, 'other tenant cannot list');
+  assert.equal((await call('GET', `/api/resumes/${r.id}/revisions/${v1.id}`, null, b)).status, 404);
+  assert.equal((await call('POST', `/api/resumes/${r.id}/revisions/${v1.id}/restore`, null, b)).status, 404);
+  assert.equal((await call('DELETE', `/api/resumes/${r.id}/revisions/${v1.id}`, null, b)).status, 404);
+  const got = await (await call('GET', `/api/resumes/${r.id}/revisions/${v1.id}`, null, a)).json();
+  assert.equal(got.data.header.name, 'First');
+  const restored = await (await call('POST', `/api/resumes/${r.id}/revisions/${v1.id}/restore`, null, a)).json();
+  assert.equal(restored.data.header.name, 'First');
+  const now = await (await call('GET', '/api/resumes/' + r.id, null, a)).json();
+  assert.equal(now.data.header.name, 'First');
+  const after = await (await call('GET', `/api/resumes/${r.id}/revisions`, null, a)).json();
+  assert.ok(after.some((x) => x.auto && /Before restoring/.test(x.label)), 'restore keeps a restore point of the replaced state');
+  assert.equal((await call('PATCH', `/api/resumes/${r.id}/revisions/${v1.id}`, { label: 'Renamed' }, a)).status, 200);
+  assert.equal((await call('DELETE', `/api/resumes/${r.id}/revisions/${v1.id}`, null, a)).status, 200);
+});

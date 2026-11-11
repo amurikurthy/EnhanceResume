@@ -74,6 +74,20 @@ const rowOut = (r, withData = true) => ({ id: r.id, title: r.title, created_at: 
 const own = (req) => db.prepare('SELECT * FROM resumes WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
 const cleanTitle = (t, d = 'Untitled resume') => String(t || '').trim().slice(0, 100) || d;
 
+const AUTO_REV_MS = Number(process.env.AUTO_REVISION_MINUTES || 10) * 60e3;
+const MAX_AUTO_REVS = 60, MAX_REVS = 120;
+function addRevision(resumeId, data, label, auto, at = Date.now()) {
+  const info = db.prepare('INSERT INTO revisions (resume_id, created_at, label, auto, data) VALUES (?,?,?,?,?)').run(resumeId, at, label, auto ? 1 : 0, data);
+  // prune: oldest automatic restore points first, then oldest of all
+  const autos = db.prepare('SELECT id FROM revisions WHERE resume_id = ? AND auto = 1 ORDER BY created_at DESC').all(resumeId);
+  autos.slice(MAX_AUTO_REVS).forEach((x) => db.prepare('DELETE FROM revisions WHERE id = ?').run(x.id));
+  const all = db.prepare('SELECT id FROM revisions WHERE resume_id = ? ORDER BY created_at DESC').all(resumeId);
+  all.slice(MAX_REVS).forEach((x) => db.prepare('DELETE FROM revisions WHERE id = ?').run(x.id));
+  return Number(info.lastInsertRowid);
+}
+const revOut = (v) => ({ id: v.id, created_at: v.created_at, label: v.label, auto: !!v.auto });
+const ownRev = (req) => (own(req) ? db.prepare('SELECT * FROM revisions WHERE id = ? AND resume_id = ?').get(Number(req.params.rid), req.params.id) : null);
+
 api.get('/resumes', (req, res) => {
   res.json(db.prepare('SELECT * FROM resumes WHERE user_id = ? ORDER BY updated_at DESC').all(req.user.id).map((r) => rowOut(r)));
 });
@@ -103,6 +117,11 @@ api.put('/resumes/:id', (req, res) => {
   const title = req.body.title !== undefined ? cleanTitle(req.body.title) : r.title;
   const data = req.body.data ? JSON.stringify(T.normalizeDoc(req.body.data)) : r.data;
   const now = Date.now();
+  // keep a restore point of the previous state when editing resumes after a pause (at most one per AUTO_REV_MINUTES)
+  if (data !== r.data) {
+    const last = db.prepare('SELECT created_at FROM revisions WHERE resume_id = ? ORDER BY created_at DESC LIMIT 1').get(r.id);
+    if (!last || now - last.created_at > AUTO_REV_MS) addRevision(r.id, r.data, '', 1, r.updated_at);
+  }
   db.prepare('UPDATE resumes SET title = ?, data = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(title, data, now, r.id, req.user.id);
   res.json({ ok: true, updated_at: now });
 });
@@ -138,6 +157,45 @@ api.get('/resumes/:id/pdf', async (req, res) => {
     console.error('PDF failed', e);
     res.status(500).json({ error: 'PDF generation failed' });
   }
+});
+
+/* ---------- revision history (versions of one resume; always scoped through ownership of the resume) ---------- */
+api.get('/resumes/:id/revisions', (req, res) => {
+  if (!own(req)) return res.status(404).json({ error: 'Not found' });
+  res.json(db.prepare('SELECT id, created_at, label, auto FROM revisions WHERE resume_id = ? ORDER BY created_at DESC').all(req.params.id).map(revOut));
+});
+api.post('/resumes/:id/revisions', (req, res) => {
+  const r = own(req);
+  if (!r) return res.status(404).json({ error: 'Not found' });
+  const label = String((req.body || {}).label || '').trim().slice(0, 80) || 'Saved version';
+  const id = addRevision(r.id, r.data, label, 0);
+  res.json(revOut(db.prepare('SELECT * FROM revisions WHERE id = ?').get(id)));
+});
+api.get('/resumes/:id/revisions/:rid', (req, res) => {
+  const v = ownRev(req);
+  if (!v) return res.status(404).json({ error: 'Not found' });
+  res.json({ ...revOut(v), data: JSON.parse(v.data) });
+});
+api.patch('/resumes/:id/revisions/:rid', (req, res) => {
+  const v = ownRev(req);
+  if (!v) return res.status(404).json({ error: 'Not found' });
+  const label = String((req.body || {}).label || '').trim().slice(0, 80);
+  db.prepare('UPDATE revisions SET label = ?, auto = 0 WHERE id = ?').run(label || 'Saved version', v.id); // naming a restore point keeps it
+  res.json({ ok: true });
+});
+api.delete('/resumes/:id/revisions/:rid', (req, res) => {
+  const v = ownRev(req);
+  if (!v) return res.status(404).json({ error: 'Not found' });
+  db.prepare('DELETE FROM revisions WHERE id = ?').run(v.id);
+  res.json({ ok: true });
+});
+api.post('/resumes/:id/revisions/:rid/restore', (req, res) => {
+  const r = own(req), v = ownRev(req);
+  if (!r || !v) return res.status(404).json({ error: 'Not found' });
+  if (r.data !== v.data) addRevision(r.id, r.data, 'Before restoring a version', 1, r.updated_at);
+  const now = Date.now();
+  db.prepare('UPDATE resumes SET data = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(v.data, now, r.id, req.user.id);
+  res.json({ ok: true, updated_at: now, data: JSON.parse(v.data) });
 });
 app.use('/api', api);
 

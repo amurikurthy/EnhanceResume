@@ -82,7 +82,8 @@
   /* ---------- section types ---------- */
   const ICON_CHOICES = ['', 'award', 'shield', 'key', 'code', 'cloud', 'network', 'server', 'book', 'cap', 'briefcase',
     'star', 'check', 'terminal', 'cpu', 'database', 'wifi', 'lock', 'flag', 'zap', 'tool', 'trend', 'layers', 'target', 'heart', 'globe', 'monitor',
-    'users', 'thumb', 'megaphone', 'pen', 'smile', 'coffee', 'compass', 'bookmark', 'home', 'camera', 'music', 'linkedin', 'github', 'mail', 'phone', 'pin', 'calendar', 'user'];
+    'users', 'thumb', 'megaphone', 'pen', 'smile', 'coffee', 'compass', 'bookmark', 'home', 'camera', 'music', 'linkedin', 'github', 'mail', 'phone', 'pin', 'calendar', 'user',
+    'trophy', 'medal', 'badge', 'badgecheck', 'shieldcheck', 'filecheck', 'clipboard', 'lightbulb', 'rocket', 'crown', 'gem', 'router', 'activity', 'chart', 'package', 'branch', 'search', 'flask', 'dollar', 'harddrive', 'infinity'];
   const CONTACT_ICONS = ['phone', 'mail', 'link', 'linkedin', 'github', 'globe', 'pin', 'star', 'calendar', 'user'];
 
   const entryLabels = (title, org) => ({ title, org });
@@ -185,7 +186,7 @@
       },
       heading: { style: 'underline', case: 'upper', size: 11, weight: 700, spacing: 0.02, icons: true },
       entries: { dateStyle: 'icons', dividers: true, bulletStyle: 'disc', orgColor: 'accent', titleSize: 10.2 },
-      skills: { style: 'chips' },
+      skills: { style: 'chips', fill: true },
       levels: { style: 'dots' },
       contactIcons: true,
     };
@@ -373,6 +374,86 @@
         pattern: { type: 'circles', area: 'header', color: '#f5b942', opacity: 0.14, scale: 1 },
         header: { style: 'left', photoShape: 'rounded', photoSize: 28, nameCase: 'title', nameSize: 28, titleColor: 'accent' },
         heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'circuit', name: 'Circuit Board', desc: 'Dark and monospaced with PCB traces.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'education', 'additionalSkills'],
+      patch: {
+        layout: 'side-left', sidebarFilled: true, columnRatio: 68, fontHeading: 'IBM Plex Mono', fontBody: 'IBM Plex Sans', fontSize: 9.2,
+        colors: Object.assign({}, THEME('forest'), { accent: '#22d3a0', sideAccent: '#22d3a0', bg: '#0b1511', sidebarBg: '#10201a' }),
+        pattern: { type: 'circuit', area: 'page', color: '#22d3a0', opacity: 0.1, scale: 1 },
+        header: { in: 'main', contactsIn: 'side', photoShape: 'rounded', photoSize: 32, nameCase: 'upper', nameSize: 23 },
+        heading: { style: 'bar', case: 'upper', size: 10, weight: 700 }, entries: { dividers: false, dateStyle: 'plain', bulletStyle: 'arrow' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'netops', name: 'Network Ops', desc: 'Clean two-column with a network-map header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 65, fontHeading: 'Manrope', fontBody: 'Inter', fontSize: 9.3,
+        colors: { accent: '#0e7490', heading: '#0b2f3a', headerBg: '#0e7490', chipBorder: '#b9d6de' },
+        pattern: { type: 'network', area: 'header', color: '#0e7490', opacity: 0.22, scale: 1.2 },
+        header: { style: 'left', photoShape: 'circle', photoSize: 28, nameCase: 'title', nameSize: 27 },
+        heading: { style: 'underline', case: 'upper', size: 10.5, weight: 800 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'academic', name: 'Academic CV', desc: 'Traditional single column serif.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'EB Garamond', fontBody: 'EB Garamond', fontSize: 10.4, lineHeight: 1.36,
+        colors: { accent: '#1f3a5f', heading: '#111111', muted: '#555555', line: '#c9c9c9' },
+        pattern: { type: 'none' },
+        header: { style: 'center', align: 'center', photoShape: 'none', nameCase: 'title', nameSize: 28, titleSize: 12, titleColor: 'muted' },
+        heading: { style: 'thin', case: 'upper', size: 11.5, weight: 600, spacing: 0.1 }, entries: { dividers: false, dateStyle: 'right', bulletStyle: 'disc', orgColor: 'text' }, skills: { style: 'plain' }, contactIcons: false,
+      },
+    },
+    {
+      id: 'sunset', name: 'Sunset Bold', desc: 'Warm banner with boxed headings.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Poppins', fontBody: 'Nunito', fontSize: 9.6,
+        colors: { accent: '#ea580c', headerBg: '#ea580c', headerText: '#ffffff', heading: '#431407', chipBorder: '#f6c9ad', chipBg: '#fff7f2' },
+        pattern: { type: 'waves', area: 'header', color: '#ffffff', opacity: 0.3, scale: 1 },
+        header: { style: 'banner', photoShape: 'circle', photoSize: 30, nameCase: 'upper', nameSize: 25 },
+        heading: { style: 'box', case: 'upper', size: 10, weight: 700 }, entries: { dividers: false, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'slate', name: 'Slate Modern', desc: 'Narrow left column, calm slate tones.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-left', columnRatio: 70, columnGap: 7, fontHeading: 'Manrope', fontBody: 'Manrope', fontSize: 9.2,
+        colors: { accent: '#475569', heading: '#0f172a', muted: '#64748b', line: '#d5dbe4', chipBorder: '#cbd5e1' },
+        pattern: { type: 'none' },
+        header: { style: 'left', photoShape: 'rounded', photoSize: 26, nameCase: 'title', nameSize: 26 },
+        heading: { style: 'short', case: 'upper', size: 10, weight: 800, spacing: 0.06 }, entries: { dividers: false, dateStyle: 'plain' }, skills: { style: 'outline' },
+      },
+    },
+    {
+      id: 'forestdark', name: 'Forest Dark', desc: 'Dark single column with a serif touch.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Lora', fontBody: 'Source Sans 3', fontSize: 9.8,
+        colors: THEME('forest'),
+        pattern: { type: 'network', area: 'header', color: '#34d399', opacity: 0.16, scale: 1.3 },
+        header: { style: 'left', photoShape: 'circle', photoSize: 28, nameCase: 'title', nameSize: 28 },
+        heading: { style: 'thin', case: 'upper', size: 10.5, weight: 700, spacing: 0.1 }, entries: { dividers: false, dateStyle: 'right', bulletStyle: 'dash' }, skills: { style: 'pipes' },
+      },
+    },
+    {
+      id: 'plumpro', name: 'Plum Pro', desc: 'Dark plum with a banner header.', side: ['skills', 'certifications', 'languages', 'achievements', 'interests', 'additionalSkills'],
+      patch: {
+        layout: 'side-right', columnRatio: 64, fontHeading: 'Raleway', fontBody: 'Lato', fontSize: 9.5,
+        colors: THEME('plum'),
+        pattern: { type: 'zigzag', area: 'header', color: '#d8b4fe', opacity: 0.25, scale: 1 },
+        header: { style: 'banner', photoShape: 'rounded', photoSize: 30, nameCase: 'upper', nameSize: 24 },
+        heading: { style: 'bar', case: 'upper', size: 10.5, weight: 800 }, entries: { dividers: true, dateStyle: 'icons' }, skills: { style: 'chips' },
+      },
+    },
+    {
+      id: 'ink', name: 'Ink & Paper', desc: 'Warm paper tones, centered and elegant.', side: [],
+      patch: {
+        layout: 'single', fontHeading: 'Playfair Display', fontBody: 'Lora', fontSize: 9.7, lineHeight: 1.42,
+        colors: THEME('paper'),
+        pattern: { type: 'none' },
+        header: { style: 'center', align: 'center', photoShape: 'circle', photoSize: 26, nameCase: 'title', nameSize: 30, titleSize: 12 },
+        heading: { style: 'short', case: 'upper', size: 10.5, weight: 700, spacing: 0.12 }, entries: { dividers: false, dateStyle: 'right' }, skills: { style: 'pipes' },
       },
     },
   ];

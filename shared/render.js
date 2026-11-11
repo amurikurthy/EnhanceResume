@@ -91,6 +91,27 @@
     home: P('M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z') + PL('9 22 9 12 15 12 15 22'),
     camera: P('M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z') + C(12, 13, 4),
     music: P('M9 18V5l12-2v13') + C(6, 18, 3) + C(18, 16, 3),
+    trophy: P('M6 9H4.5a2.5 2.5 0 0 1 0-5H6') + P('M18 9h1.5a2.5 2.5 0 0 0 0-5H18') + P('M4 22h16') + P('M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22') + P('M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22') + P('M18 2H6v7a6 6 0 0 0 12 0V2z'),
+    medal: P('M7.21 15L2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15') + P('M11 12L5.12 2.2') + P('M13 12l5.88-9.8') + P('M8 7h8') + C(12, 17, 5),
+    badge: P('M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76z'),
+    badgecheck: P('M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76z') + P('M9 12l2 2 4-4'),
+    shieldcheck: P('M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z') + P('M9 12l2 2 4-4'),
+    filecheck: P('M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z') + PL('14 2 14 8 20 8') + P('M9 15l2 2 4-4'),
+    clipboard: R(8, 2, 8, 4, 1) + P('M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2') + P('M9 14l2 2 4-4'),
+    lightbulb: P('M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5') + P('M9 18h6') + P('M10 22h4'),
+    rocket: P('M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z') + P('M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z') + P('M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0') + P('M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5'),
+    crown: P('M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z') + P('M5 20h14'),
+    gem: P('M6 3h12l4 6-10 13L2 9z') + P('M11 3L8 9l4 13 4-13-3-6') + P('M2 9h20'),
+    router: R(2, 14, 20, 8, 2) + L(6, 18, 6.01, 18) + L(10, 18, 10.01, 18) + P('M15 10v4') + P('M17.84 7.17a4 4 0 0 0-5.66 0') + P('M20.66 4.34a8 8 0 0 0-11.31 0'),
+    activity: PL('22 12 18 12 15 21 9 3 6 12 2 12'),
+    chart: L(12, 20, 12, 10) + L(18, 20, 18, 4) + L(6, 20, 6, 16),
+    package: P('M16.5 9.4L7.55 4.24') + P('M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z') + PL('3.29 7 12 12 20.71 7') + L(12, 22, 12, 12),
+    branch: L(6, 3, 6, 15) + C(18, 6, 3) + C(6, 18, 3) + P('M18 9a9 9 0 0 1-9 9'),
+    search: C(11, 11, 8) + L(21, 21, 16.65, 16.65),
+    flask: P('M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2') + P('M8.5 2h7') + P('M7 16h10'),
+    dollar: L(12, 1, 12, 23) + P('M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'),
+    harddrive: L(22, 12, 2, 12) + P('M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z') + L(6, 16, 6.01, 16) + L(10, 16, 10.01, 16),
+    infinity: P('M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z'),
   };
   const icon = (name) => (ICONS[name] ? `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>` : '');
 
@@ -244,7 +265,8 @@
       (it.title || EDIT ? `<div class="rz-e-title"${F('title', 'rich', 'Title')}>${fmt(it.title)}</div>` : '') +
       (org || EDIT ? `<div class="rz-e-org"${F('org', 'line', 'Organization')}>${org}</div>` : '') + date + loc + `</div>` +
       (it.text || EDIT ? `<div class="rz-e-text"${F('text', 'multi', 'Add a description')}>${richText(it.text)}</div>` : '') +
-      (bullets.length ? `<ul class="rz-bul">${bullets.map(([b, i]) => `<li${fa(`B:${sid}:${it.id}:${i}`, 'rich', 'Describe an achievement')}>${fmt(b)}</li>`).join('')}</ul>` : '') +
+      (EDIT ? `<ul class="rz-bul"${fa(`BL:${sid}:${it.id}`, 'list', '')}>${(it.bullets.length ? it.bullets : ['']).map((b) => `<li data-ph="Describe an achievement">${fmt(b)}</li>`).join('')}</ul>`
+        : bullets.length ? `<ul class="rz-bul">${bullets.map(([b]) => `<li>${fmt(b)}</li>`).join('')}</ul>` : '') +
       `</div></div>`;
   }
 
@@ -301,7 +323,7 @@
     };
     const style = Object.entries(vars).map(([k, v]) => `${k}:${esc(v)}`).join(';');
     const cls = ['rz', 'lay-' + (li.twoCol ? s.layout : 'single'), 'hs-' + s.heading.style, 'hc-' + s.heading.case, 'sk-' + s.skills.style,
-      'bl-' + s.entries.bulletStyle, 'ds-' + s.entries.dateStyle, 'hd-' + s.header.style, 'nc-' + s.header.nameCase, 'lv-' + s.levels.style];
+      'bl-' + s.entries.bulletStyle, 'ds-' + s.entries.dateStyle, s.skills.fill ? 'sk-fill' : 'sk-nofill', 'hd-' + s.header.style, 'nc-' + s.header.nameCase, 'lv-' + s.levels.style];
     if (s.entries.dividers) cls.push('div');
 
     const headerMain = li.twoCol && s.header.in === 'main';
