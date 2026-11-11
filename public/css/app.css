@@ -392,3 +392,8 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .crop-zoom { flex-direction: row; align-items: center; gap: 10px; width: 300px; font-size: 18px; } .crop-zoom input { flex: 1; accent-color: var(--brand); }
 .crop-view::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px) 0 33.3%/100% 33.3%, linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px) 33.3% 0/33.3% 100%; background-repeat: no-repeat; opacity: .0; transition: opacity .15s; } .crop-view.drag::after { opacity: 1; }
 .photo-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* empty optional text never leaves a gap in the editor: it collapses until you are working in that entry */
+.sheet-edit [data-iid]:not(.is-active) .rz-e-text:empty,
+.sheet-edit [data-iid]:not(.is-active) .rz-li-s:empty,
+.sheet-edit [data-iid]:not(.is-active) .rz-bul.is-blank { display: none; }

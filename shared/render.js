@@ -466,7 +466,7 @@
       (it.title || EDIT ? `<div class="rz-e-title"${F('title', 'rich', 'Title')}>${fmt(it.title)}</div>` : '') +
       (org || EDIT ? `<div class="rz-e-org"${F('org', 'line', 'Organization')}>${org}</div>` : '') + date + loc + `</div>` +
       (it.text || EDIT ? `<div class="rz-e-text"${F('text', 'multi', 'Add a description')}>${richText(it.text)}</div>` : '') +
-      (EDIT ? `<ul class="rz-bul"${fa(`BL:${sid}:${it.id}`, 'list', '')}>${(it.bullets.length ? it.bullets : ['']).map((b) => `<li data-ph="Describe an achievement">${fmt(b)}</li>`).join('')}</ul>`
+      (EDIT ? `<ul class="rz-bul${it.bullets.every((b) => !b.trim()) ? ' is-blank' : ''}"${fa(`BL:${sid}:${it.id}`, 'list', '')}>${(it.bullets.length ? it.bullets : ['']).map((b) => `<li data-ph="Describe an achievement">${fmt(b)}</li>`).join('')}</ul>`
         : bullets.length ? `<ul class="rz-bul">${bullets.map(([b]) => `<li>${fmt(b)}</li>`).join('')}</ul>` : '') +
       `</div></div>`;
   }
