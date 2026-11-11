@@ -33,21 +33,13 @@ export async function openProfile() {
   };
   drawPhoto();
 
-  const pw = { cur: h('input', { type: 'password', autocomplete: 'current-password' }), next: h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'At least 8 characters' }), msg: h('div', { class: 'form-err' }) };
-  const pwBox = h('details', { class: 'grp pf-pw' }, h('summary', null, u.hasPassword ? 'Change password' : 'Set a password'),
-    h('div', { class: 'grp-b' }, u.hasPassword ? h('label', null, 'Current password', pw.cur) : null, h('label', null, 'New password', pw.next), pw.msg,
-      h('button', { type: 'button', class: 'btn small', onclick: async () => {
-        pw.msg.textContent = '';
-        try { await api.post('/api/profile/password', { current: pw.cur.value, password: pw.next.value }); pw.cur.value = pw.next.value = ''; toast('Password updated. Other devices were signed out'); } catch (e) { pw.msg.textContent = e.message; }
-      } }, 'Update password')));
-
   await modal('Your profile', (close) => h('div', { class: 'pf' },
     photoBox,
     h('label', null, 'Name', name),
     h('label', null, 'Email', h('input', { type: 'text', value: u.email, disabled: true })),
     h('div', { class: 'pf-grid' }, FIELDS.map(([k, label]) => h('label', null, label, inputs[k]))),
     h('p', { class: 'muted small' }, 'These details fill in new resumes automatically. Existing resumes keep their own contact details.'),
-    pwBox, err,
+    err,
     h('div', { class: 'pf-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(false) }, 'Cancel'),
       h('button', { type: 'button', class: 'btn primary', onclick: async () => {
         err.textContent = '';

@@ -111,15 +111,6 @@ api.put('/profile', (req, res) => {
   db.prepare('UPDATE users SET name = ?, profile = ?, photo = ? WHERE id = ?').run(name, JSON.stringify(profile), photo, u.id);
   res.json({ user: A.userOut(userRow(u.id)) });
 });
-api.post('/profile/password', (req, res) => {
-  const u = userRow(req.user.id), { current, password } = req.body || {};
-  if (typeof password !== 'string' || password.length < 8 || password.length > 200) return res.status(400).json({ error: 'New password must be at least 8 characters' });
-  const has = u.pass_hash && u.pass_hash !== '!';
-  if (has && !(typeof current === 'string' && A.verifyPassword(current, u.pass_hash))) return res.status(403).json({ error: 'Current password is incorrect' });
-  db.prepare('UPDATE users SET pass_hash = ? WHERE id = ?').run(A.hashPassword(password), u.id);
-  db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(u.id, A.currentTokenHash(req)); // sign out other devices
-  res.json({ ok: true });
-});
 
 /* a new resume starts from the account profile: name, title, contact details; the photo stays linked (photoMode: 'profile') */
 function applyProfile(doc, u) {

@@ -59,7 +59,7 @@ function userOut(u) {
   try { profile = typeof u.profile === 'string' ? JSON.parse(u.profile || '{}') : (u.profile || {}); } catch { /* keep empty */ }
   return { id: u.id, email: u.email, name: u.name, isAdmin: !!(u.isAdmin ?? u.is_admin), photo: u.photo || '', profile, hasPassword: !!u.pass_hash && u.pass_hash !== '!' };
 }
-const currentTokenHash = (req) => { const t = parseCookies(req)[COOKIE]; return t ? sha(t) : null; };
+
 
 function requireAdmin(req, res, next) {
   if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'Admin only' });
@@ -93,4 +93,4 @@ function rateLimit(key, max, windowMs) {
 
 setInterval(() => db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now()), 3600 * 1000).unref();
 
-module.exports = { currentTokenHash, userOut, requireAdmin, sha, hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };
+module.exports = { userOut, requireAdmin, sha, hashPassword, verifyPassword, startSession, endSession, loadUser, requireAuth, csrfGuard, rateLimit };
