@@ -1521,11 +1521,12 @@ export async function mountEditor(root, id) {
     if ('value' in el && el !== document.activeElement) el.value = val;
   }
   /* ...and focusing a sidebar control highlights the matching spot on the page */
-  function pageHighlight(fid) {
+  function pageHighlight(fid, idx) {
     content.querySelectorAll('.pv-hl').forEach((x) => x.classList.remove('pv-hl'));
     if (!fid) return;
-    const f = content.querySelector(`[data-f="${cssId(fid)}"]`);
+    let f = content.querySelector(`[data-f="${cssId(fid)}"]`);
     if (!f) return;
+    if (idx >= 0 && fid.startsWith('BL:') && f.children[idx]) f = f.children[idx]; // a single bullet, not the whole list
     f.classList.add('pv-hl');
     const sr = stage.getBoundingClientRect(), r = f.getBoundingClientRect();
     if (r.top < sr.top + 60 || r.bottom > sr.bottom - 60) stage.scrollTo({ top: stage.scrollTop + (r.top - sr.top) - sr.height / 3, behavior: 'smooth' });
@@ -1535,7 +1536,7 @@ export async function mountEditor(root, id) {
   const panelBody = h('div', { class: 'panel-body' });
   const tabs = h('div', { class: 'tabs' });
   panelBody.addEventListener('contextmenu', onPanelContext);
-  panelBody.addEventListener('focusin', (ev) => { if (!previewDoc) { const c = ev.target.closest('[data-fid]'); if (c) pageHighlight(c.dataset.fid); } });
+  panelBody.addEventListener('focusin', (ev) => { if (!previewDoc) { const c = ev.target.closest('[data-fid]'); if (c) { const row = c.dataset.fid.startsWith('BL:') ? ev.target.closest('.row') : null; pageHighlight(c.dataset.fid, row && row.parentElement === c ? Array.from(c.children).indexOf(row) : -1); } } });
   panelBody.addEventListener('focusout', () => pageHighlight(null));
   const panelEl = h('aside', { class: 'panel' }, tabs, panelBody);
   const panelSplit = h('div', { class: 'splitter', title: 'Drag to resize · double-click to reset' });
