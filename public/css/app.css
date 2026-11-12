@@ -390,7 +390,9 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .crop-img { position: absolute; max-width: none; pointer-events: none; }
 .crop-guide { position: absolute; inset: 0; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); outline: 2px solid rgba(255,255,255,.9); outline-offset: -2px; } .crop-guide.round { border-radius: 50%; }
 .crop-zoom { flex-direction: row; align-items: center; gap: 10px; width: 300px; font-size: 18px; } .crop-zoom input { flex: 1; accent-color: var(--brand); }
-.crop-view::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px) 0 33.3%/100% 33.3%, linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px) 33.3% 0/33.3% 100%; background-repeat: no-repeat; opacity: .0; transition: opacity .15s; } .crop-view.drag::after { opacity: 1; }
+.crop-view::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .15s;
+  --g: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.55));
+  background: var(--g) 0 33.333% / 100% 1px no-repeat, var(--g) 0 66.667% / 100% 1px no-repeat, var(--g) 33.333% 0 / 1px 100% no-repeat, var(--g) 66.667% 0 / 1px 100% no-repeat; } .crop-view.drag::after { opacity: 1; }
 .photo-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
 /* the editor lays out exactly like the exported PDF: anything empty collapses (as it is omitted from the PDF)
