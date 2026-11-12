@@ -447,7 +447,6 @@ body.resizing .stage .sheet { will-change: transform; }
 .tpl .tpl-marks { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 4px; justify-content: flex-start; z-index: 2; pointer-events: none; }
 .tpl .tpl-marks:empty { display: none; }
 .tpl .tpl-marks em { font-style: normal; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--brand); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-.tpl .tpl-marks em:nth-child(2) { background: #f59e0b; color: #1a1300; }
 .tpl.picked { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
 .tpl-eye { display: none !important; }
 
