@@ -6,7 +6,7 @@ const fmt = (t) => (t ? new Date(t).toLocaleString([], { dateStyle: 'medium', ti
 
 export async function mountAdmin(root) {
   const main = h('main', { class: 'admin' });
-  root.replaceChildren(topbar(h('a', { class: 'btn ghost', href: '#/' }, '← My resumes')), main);
+  root.replaceChildren(topbar(h('a', { class: 'btn ghost back', href: '#/' }, '← My resumes')), main);
 
   async function draw() {
     const { users, config } = await api.get('/api/admin/users');

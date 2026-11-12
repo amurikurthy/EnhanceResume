@@ -1569,7 +1569,7 @@ export async function mountEditor(root, id) {
 
   const bar = topbar(null);
   bar.querySelector('.spacer').before(
-    h('a', { class: 'btn ghost', href: '#/' }, '← My resumes'), titleWrap, statusEl);
+    h('a', { class: 'btn ghost back', href: '#/' }, '← My resumes'), titleWrap, statusEl);
   undoBtn = h('button', { class: 'icon-btn', title: 'Undo (Ctrl+Z)', 'aria-label': 'Undo', onclick: undo, html: SVG(ICO.undo) });
   redoBtn = h('button', { class: 'icon-btn', title: 'Redo (Ctrl+Shift+Z)', 'aria-label': 'Redo', onclick: redo, html: SVG(ICO.redo) });
   syncUndo();
