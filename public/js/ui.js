@@ -26,13 +26,19 @@ export function toast(msg, kind = '') {
 
 export function modal(title, body, actions = [], opts = {}) {
   return new Promise((resolve) => {
-    const close = (v) => { ov.remove(); resolve(v === undefined ? null : v); };
+    const prevFocus = document.activeElement;
+    const onKey = (e) => { // Escape closes the top-most dialog only
+      if (e.key !== 'Escape') return;
+      const all = document.querySelectorAll('.overlay'); if (all[all.length - 1] !== ov) return;
+      e.preventDefault(); e.stopPropagation(); close(null);
+    };
+    const close = (v) => { document.removeEventListener('keydown', onKey, true); ov.remove(); try { if (prevFocus && prevFocus.isConnected && prevFocus.focus) prevFocus.focus({ preventScroll: true }); } catch { /* ignore */ } resolve(v === undefined ? null : v); };
     const ov = h('div', { class: 'overlay', onmousedown: (e) => { if (e.target === ov) close(null); } },
       h('div', { class: 'modal' + (opts.wide ? ' wide' : '') },
         h('div', { class: 'modal-h' }, h('h3', null, title), h('button', { class: 'icon-btn', onclick: () => close(null), 'aria-label': 'Close' }, '×')),
         h('div', { class: 'modal-b' }, typeof body === 'function' ? body(close) : body),
         actions.length ? h('div', { class: 'modal-f' }, actions.map((a) => h('button', { class: 'btn ' + (a.kind || ''), onclick: () => close(a.value) }, a.label))) : null));
-    document.body.append(ov);
+    document.body.append(ov); document.addEventListener('keydown', onKey, true);
     const f = ov.querySelector('input,textarea'); if (f) f.focus();
   });
 }
@@ -130,6 +136,7 @@ export function ctxMenu(items, x, y) {
     h('span', { class: 'ctx-l' }, it.label), it.kbd ? h('kbd', null, it.kbd) : null));
   });
   if (!menu.children.length) return;
+  const anchor = document.elementFromPoint(x, y); // what the menu was opened on (taken before the menu covers it)
   document.body.append(menu); ctxEl = menu;
   const r = menu.getBoundingClientRect();
   menu.style.left = Math.max(6, Math.min(x, innerWidth - r.width - 6)) + 'px';
@@ -145,7 +152,8 @@ export function ctxMenu(items, x, y) {
   document.addEventListener('mousedown', onDown, true);
   document.addEventListener('keydown', onKey, true);
   const opened = Date.now();
-  const onScroll = () => { if (Date.now() - opened > 250) closeCtx(); }; // ignore the scroll that opening the menu can cause
+  // only scrolling of whatever the menu was opened on closes it; the sidebar following your click (a smooth scroll) must not
+  const onScroll = (e) => { const t = e.target; if (Date.now() - opened > 250 && (t === document || !anchor || (t.contains && t.contains(anchor)))) closeCtx(); };
   window.addEventListener('blur', closeCtx); window.addEventListener('resize', closeCtx); document.addEventListener('scroll', onScroll, true);
   ctxCleanup = () => { document.removeEventListener('mousedown', onDown, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('blur', closeCtx); window.removeEventListener('resize', closeCtx); document.removeEventListener('scroll', onScroll, true); };
 }
