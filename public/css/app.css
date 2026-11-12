@@ -427,10 +427,10 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .topbar .title-wrap { flex-shrink: 1; }
 
 /* performance: template cards only render when scrolled into view, and each thumbnail is an isolated, fixed-size paint area */
-.tpl-grid .tpl { content-visibility: auto; contain-intrinsic-size: auto 340px; contain: layout style; }
+.tpl-grid .tpl { content-visibility: auto; contain-intrinsic-size: auto 340px; contain: layout style paint; }
+body.resizing .tpl-grid { pointer-events: none; } body.resizing .tpl-grid .tpl { transition: none; }
 .thumb { contain: strict; } .thumb-in { backface-visibility: hidden; }
 /* while the divider is being dragged, thumbnails are not repainted at all */
-body.resizing .tpl-grid { content-visibility: hidden; contain-intrinsic-size: auto 2400px; }
 body.resizing .stage .sheet { will-change: transform; }
 
 /* the bullet being edited is outlined on its own, and so is its row in the sidebar */
