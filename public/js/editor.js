@@ -454,7 +454,7 @@ export async function mountEditor(root, id) {
   function hideFloats() {
     itemBar.style.display = 'none'; itemBar.style.visibility = ''; selBar.style.display = 'none'; linkMode = false;
     content.querySelectorAll('.is-active, .is-bullet').forEach((e) => e.classList.remove('is-active', 'is-bullet'));
-    panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
+    if (!panelBody.contains(document.activeElement)) panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
     activeEl = null;
   }
   function positionBars() {
@@ -514,6 +514,7 @@ export async function mountEditor(root, id) {
     return it ? { ul, li, i: Array.from(ul.children).indexOf(li), sec, it, fid: ul.dataset.f } : null;
   }
   function markBullet() {
+    if (panelBody.contains(document.activeElement)) return; // working in the sidebar: its own highlight owns the bullet marks
     content.querySelectorAll('.is-bullet').forEach((e) => e.classList.remove('is-bullet'));
     panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
     const b = bulletOf(); if (!b) return;
@@ -1142,48 +1143,34 @@ export async function mountEditor(root, id) {
   /* mix and match: take everything, only the layout & fonts, or only the colors & background from a template */
   const TPL_MODES = [['all', 'Everything'], ['layout', 'Layout & fonts'], ['colors', 'Colors & background']];
   const tplMode = () => { try { const m = localStorage.getItem('er-tpl-mode'); return TPL_MODES.some(([k]) => k === m) ? m : 'all'; } catch { return 'all'; } };
-  let mixLayout = '', mixColors = '';
-  function mixBuilder() {
-    const nameOf = (id) => (T.TEMPLATES.find((x) => x.id === id) || {}).name;
-    const label = () => `${mixLayout ? nameOf(mixLayout) + ' layout' : 'your layout'} + ${mixColors ? nameOf(mixColors) + ' colors' : 'your colors'}`;
-    const mixed = () => T.mixTemplates(doc, mixLayout, mixColors);
-    const thumbBox = h('div', { class: 'mix-prev' });
-    const summary = h('small', { class: 'muted' });
-    const pBtn = h('button', { type: 'button', class: 'btn small', onclick: () => previewDesign(label(), mixed()) }, h('span', { html: SVG('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>') }), 'Preview on page');
-    const aBtn = h('button', { type: 'button', class: 'btn small primary', onclick: () => applyDesignDoc(mixed(), label()) }, 'Apply');
-    const refresh = () => {
-      const none = !mixLayout && !mixColors;
-      pBtn.disabled = aBtn.disabled = none;
-      summary.textContent = none ? 'Choose a layout and/or a color scheme to combine.' : label();
-      thumbBox.replaceChildren(thumb(mixed(), 128));
-    };
-    const select = (label, get, set) => {
-      const el = h('select', null, h('option', { value: '' }, 'Keep my current'), T.TEMPLATES.map((t) => h('option', { value: t.id, selected: get() === t.id }, t.name)));
-      el.addEventListener('change', () => { set(el.value); refresh(); });
-      return h('label', { class: 'f' }, h('span', { class: 'f-head' }, label), el);
-    };
-    refresh();
-    return h('div', { class: 'mix' }, h('div', { class: 'f-lbl' }, 'Mix & match'),
-      h('div', { class: 'mix-grid' }, h('div', { class: 'mix-ctl' }, select('Layout & fonts from', () => mixLayout, (v) => { mixLayout = v; }), select('Colors & background from', () => mixColors, (v) => { mixColors = v; }), summary, h('div', { class: 'mix-btns' }, pBtn, aBtn)), thumbBox));
+  /* pick layouts and colours straight from the gallery: each pick previews on the page at once (banner on top with Revert / Apply) */
+  let mixLayout = '', mixColors = '', tplBrowser = null;
+  const nameOf = (id) => (T.TEMPLATES.find((x) => x.id === id) || {}).name;
+  const clearMix = () => { mixLayout = mixColors = ''; if (tplBrowser) tplBrowser.refresh(); };
+  const mixLabel = () => (mixLayout && mixLayout === mixColors ? nameOf(mixLayout)
+    : `${mixLayout ? nameOf(mixLayout) + ' layout' : 'your layout'} + ${mixColors ? nameOf(mixColors) + ' colors' : 'your colors'}`);
+  const mixDoc = () => (mixLayout && mixLayout === mixColors ? T.applyTemplate(doc, mixLayout) : T.mixTemplates(doc, mixLayout, mixColors));
+  function pickDesign(t, mode) {
+    if (mode === 'all') { const same = mixLayout === t.id && mixColors === t.id; mixLayout = mixColors = same ? '' : t.id; }
+    else if (mode === 'layout') mixLayout = mixLayout === t.id ? '' : t.id;
+    else mixColors = mixColors === t.id ? '' : t.id;
+    if (!mixLayout && !mixColors) { exitPreview(); return; }
+    previewDesign(mixLabel(), mixDoc());
+    if (tplBrowser) tplBrowser.refresh();
   }
   function templatesTab() {
     const mode = tplMode();
-    const note = { all: 'Switching templates keeps your text but resets all design options.',
-      layout: 'Takes the layout, fonts, spacing and styles from the template and keeps your colors.',
-      colors: 'Takes only the colors and background from the template and keeps your layout and fonts.' }[mode];
+    const note = { all: 'Click a template to use its whole design.',
+      layout: 'Click a template to use its layout, fonts and spacing. Your colors stay.',
+      colors: 'Click a template to use its colors and background. Your layout stays.' }[mode];
     const picker = h('div', { class: 'seg tpl-mode' }, TPL_MODES.map(([m, l]) => h('button', { type: 'button', class: mode === m ? 'on' : '', onclick: () => { try { localStorage.setItem('er-tpl-mode', m); } catch { /* private mode */ } drawPanel(); } }, l)));
-    const modeLabel = TPL_MODES.find(([m]) => m === mode)[1].toLowerCase();
-    const browser = templateBrowser({
+    const browser = tplBrowser = templateBrowser({
       sampleFor: (t) => T.applyTemplateParts(doc, t.id, mode), getCurrent: () => S().template, width: 120,
-      onPreview: (t) => previewDesign(mode === 'all' ? t.name : `${t.name} (${modeLabel})`, T.applyTemplateParts(doc, t.id, mode)),
-      onPick: async (t) => {
-        if (mode === 'all' && S().template === t.id) return;
-        const msg = { all: 'This switches the design (layout, fonts, colors). Your content is kept.', layout: `Use ${t.name}'s layout, fonts and spacing and keep your current colors?`, colors: `Use ${t.name}'s colors and background and keep your current layout?` }[mode];
-        if (!(await confirmDlg('Apply template', msg, 'Apply'))) return;
-        doc = T.applyTemplateParts(doc, t.id, mode); touch(); drawPanel();
-      },
+      getMarks: (t) => ({ layout: mixLayout === t.id, colors: mixColors === t.id }),
+      onPick: (t) => pickDesign(t, mode),
     });
-    return h('div', { class: 'tab-content' }, mixBuilder(), h('div', { class: 'tpl-apply' }, h('div', { class: 'f-lbl' }, 'Or apply a single template'), picker, h('p', { class: 'muted small' }, note + ' The eye on a card previews it on your page first.')), browser);
+    return h('div', { class: 'tab-content' }, h('div', { class: 'tpl-apply' }, h('div', { class: 'f-lbl' }, 'Pick from any template'), picker,
+      h('p', { class: 'muted small' }, note + ' Pick a layout from one and colors from another to combine them. Each pick previews on your page; nothing changes until you press Apply.')), browser);
   }
 
   /* ---------------- version history drawer ---------------- */
@@ -1246,10 +1233,10 @@ export async function mountEditor(root, id) {
     try { await api.post(`/api/resumes/${id}/revisions`, { label }); toast('Version saved'); loadRevisions(); } catch (e) { toast(e.message, 'err'); }
   }
   /* preview an older state on the page without touching the current resume; restoring is an explicit, confirmed action */
-  function showPreview(pdoc, key, title, sub, onRestore, applyLabel = 'Restore this version', lockPanel = true) {
+  function showPreview(pdoc, key, title, sub, onRestore, applyLabel = 'Restore this version', lockPanel = true, backLabel = 'Back to current') {
     previewDoc = pdoc; previewRev = key;
     banner.replaceChildren(h('div', { class: 'pb-t' }, h('b', null, title), h('small', null, sub)),
-      h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, 'Back to current'), h('button', { class: 'btn primary', onclick: onRestore }, applyLabel)));
+      h('div', { class: 'pb-a' }, h('button', { class: 'btn', onclick: exitPreview }, backLabel), h('button', { class: 'btn primary', onclick: onRestore }, applyLabel)));
     stage.classList.add('previewing'); if (lockPanel) panelEl.classList.add('locked');
     hideFloats(); paintPreview(); drawHistory();
     stage.scrollTo({ top: 0 });
@@ -1276,7 +1263,7 @@ export async function mountEditor(root, id) {
   function exitPreview() {
     if (!previewDoc) return;
     previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
-    paintPreview(); if (histOpen) drawHistory();
+    clearMix(); paintPreview(); if (histOpen) drawHistory();
   }
   async function restoreRevision(rev) {
     if (!(await confirmDlg('Restore this version', 'Your current resume is saved as a restore point first, so you can undo this.', 'Restore'))) return;
@@ -1291,11 +1278,11 @@ export async function mountEditor(root, id) {
   }
   /* design previews: see a template (or a layout + colors mix) on your real content before applying it */
   function previewDesign(label, nd) {
-    showPreview(nd, { kind: 'design' }, `Previewing design: ${label}`, 'Your resume is unchanged until you apply it. Pick another template to compare, or go back.', () => applyDesignDoc(nd, label), 'Apply this design', false);
+    showPreview(nd, { kind: 'design' }, `Previewing: ${label}`, 'Your resume is unchanged until you apply. Keep clicking templates to mix layouts and colors, or revert to go back.', () => applyDesignDoc(nd, label), 'Apply this design', false, 'Revert');
   }
   function applyDesignDoc(nd, label) {
     previewDoc = null; previewRev = null; stage.classList.remove('previewing'); panelEl.classList.remove('locked');
-    doc = nd; commit(); drawPanel(); toast(`${label} applied. Ctrl+Z undoes it`);
+    mixLayout = mixColors = ''; doc = nd; commit(); drawPanel(); toast(`${label} applied. Ctrl+Z undoes it`);
   }
   function drawHistory() {
     const nameIn = h('input', { type: 'text', placeholder: 'Name this version…', maxlength: 80 });
@@ -1522,12 +1509,15 @@ export async function mountEditor(root, id) {
   }
   /* ...and focusing a sidebar control highlights the matching spot on the page */
   function pageHighlight(fid, idx) {
-    content.querySelectorAll('.pv-hl').forEach((x) => x.classList.remove('pv-hl'));
+    content.querySelectorAll('.pv-hl, .pv-bullet').forEach((x) => x.classList.remove('pv-hl', 'pv-bullet'));
+    panelBody.querySelectorAll('.follow-b').forEach((x) => x.classList.remove('follow-b'));
     if (!fid) return;
     let f = content.querySelector(`[data-f="${cssId(fid)}"]`);
     if (!f) return;
-    if (idx >= 0 && fid.startsWith('BL:') && f.children[idx]) f = f.children[idx]; // a single bullet, not the whole list
-    f.classList.add('pv-hl');
+    if (idx >= 0 && fid.startsWith('BL:') && f.children[idx]) { // a single bullet: same amber look as clicking it on the page
+      f.classList.add('pv-hl'); f = f.children[idx]; f.classList.add('pv-bullet');
+      const box = panelBody.querySelector(`[data-fid="${cssId(fid)}"]`), row = box && box.children[idx]; if (row) row.classList.add('follow-b');
+    } else f.classList.add('pv-hl');
     const sr = stage.getBoundingClientRect(), r = f.getBoundingClientRect();
     if (r.top < sr.top + 60 || r.bottom > sr.bottom - 60) stage.scrollTo({ top: stage.scrollTop + (r.top - sr.top) - sr.height / 3, behavior: 'smooth' });
   }
