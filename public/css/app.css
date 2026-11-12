@@ -434,8 +434,8 @@ body.resizing .tpl-grid { content-visibility: hidden; contain-intrinsic-size: au
 body.resizing .stage .sheet { will-change: transform; }
 
 /* the bullet being edited is outlined on its own, and so is its row in the sidebar */
-.sheet-edit .rz-bul li.is-bullet { outline: 2px solid #0ea5e9; outline-offset: 2px; border-radius: 3px; background: rgba(14,165,233,.12); }
-.follow-b { outline: 2px solid #0ea5e9; outline-offset: 1px; border-radius: 8px; background: rgba(14,165,233,.1); }
+.sheet-edit .rz-bul li.is-bullet { outline: 2px solid #f59e0b; outline-offset: 2px; border-radius: 3px; background: rgba(245,158,11,.14); }
+.follow-b { outline: 2px solid #f59e0b; outline-offset: 1px; border-radius: 8px; background: rgba(245,158,11,.12); }
 .fbtn.bul { color: #059669; } .fbtn.bul.danger { color: #dc2626; } .fbtn.bul[title^="Move this bullet up"] { margin-left: 4px; position: relative; } .fbtn.bul[title^="Move this bullet up"]::before { content: ''; position: absolute; left: -5px; top: 6px; bottom: 6px; width: 1px; background: rgba(120,120,140,.35); }
 /* template cards never push the grid wider than the panel */
 .tpl-grid .tpl { min-width: 0; overflow: hidden; }
