@@ -523,7 +523,7 @@
       }).join('');
     }
     const hicon = sec.icon && doc.settings.heading.icons ? `<span class="rz-h-ic" data-pick="section">${icon(sec.icon)}</span>` : '';
-    return `<section class="rz-sec k-${kind} t-${esc(sec.type)}" data-sid="${esc(sec.id)}"><h2 class="rz-h">${hicon}<span${fa(`S:${sid}:title`, 'line', 'Section title')}>${esc(sec.title)}</span></h2><div class="rz-body">${body}</div></section>`;
+    return `<section class="rz-sec k-${kind} t-${esc(sec.type)}${sec.items.length ? '' : ' is-void'}" data-sid="${esc(sec.id)}"><h2 class="rz-h">${hicon}<span${fa(`S:${sid}:title`, 'line', 'Section title')}>${esc(sec.title)}</span></h2><div class="rz-body">${body}</div></section>`;
   }
 
   /* ---------- main entry ---------- */

@@ -188,8 +188,8 @@ api.get('/resumes/:id/pdf', async (req, res) => {
   if (!r) return res.status(404).json({ error: 'Not found' });
   try {
     const doc = T.resolveProfile(JSON.parse(r.data), { photo: (userRow(req.user.id) || {}).photo });
-    const buf = await renderPdf(doc);
     const fname = (r.title || 'resume').replace(/[^\w.\- ]+/g, '').trim().replace(/\s+/g, '_') || 'resume';
+    const buf = await renderPdf(doc, r.title || 'Resume');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${req.query.inline ? 'inline' : 'attachment'}; filename="${fname}.pdf"`);
     res.setHeader('Cache-Control', 'no-store');

@@ -151,7 +151,7 @@ export function ctxMenu(items, x, y) {
 }
 
 /* ---------- photo cropper: drag to position, zoom with the slider or mouse wheel, outputs a square JPEG ---------- */
-export async function cropPhoto(source, { size = 480, shape = 'circle', title = 'Crop your photo' } = {}) {
+export async function cropPhoto(source, { size = 480, shape = 'circle', title = 'Crop your photo', png = false } = {}) {
   const url = typeof source === 'string' ? source : URL.createObjectURL(source);
   const img = new Image();
   try { await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Could not read that image')); img.src = url; }); }
@@ -188,8 +188,8 @@ export async function cropPhoto(source, { size = 480, shape = 'circle', title = 
     h('div', { class: 'pf-actions' }, h('button', { type: 'button', class: 'btn', onclick: () => close(null) }, 'Cancel'),
       h('button', { type: 'button', class: 'btn primary', onclick: () => {
         const c = document.createElement('canvas'); c.width = c.height = size;
-        const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+        const ctx = c.getContext('2d'); if (!png) { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size); }
         ctx.drawImage(img, -x / s(), -y / s(), V / s(), V / s(), 0, 0, size, size);
-        close(c.toDataURL('image/jpeg', 0.88));
-      } }, 'Use this photo'))), []);
+        close(png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.88));
+      } }, png ? 'Use this image' : 'Use this photo'))), []);
 }

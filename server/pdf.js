@@ -32,11 +32,11 @@ function ensureIconLibs(doc) {
   }
 }
 
-function buildHtml(doc) {
+function buildHtml(doc, title) {
   ensureIconLibs(doc);
   const s = doc.settings, m = s.margins;
   const [pw, ph] = T.PAGE_MM[s.pageSize] || T.PAGE_MM.A4;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${R.esc(doc.header.name || 'Resume')}</title><style>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${R.esc(title || 'Resume')}</title><style>
 ${fontFaces([s.fontHeading, s.fontBody])}
 @page { size: ${pw}mm ${ph}mm; margin: 0; }
 html { background: ${s.colors.bg}; }
@@ -82,7 +82,7 @@ async function slot() {
 }
 function release() { active--; const w = waiters.shift(); if (w) w(); }
 
-async function renderPdf(doc) {
+async function renderPdf(doc, title) {
   await slot();
   let page;
   try {
@@ -90,7 +90,7 @@ async function renderPdf(doc) {
     page = await browser.newPage();
     await page.setRequestInterception(true); // resume content is self-contained; block every outbound request
     page.on('request', (req) => (/^(data:|about:)/.test(req.url()) ? req.continue() : req.abort()));
-    await page.setContent(buildHtml(doc), { waitUntil: 'load', timeout: 20000 });
+    await page.setContent(buildHtml(doc, title), { waitUntil: 'load', timeout: 20000 });
     await page.evaluate(() => document.fonts.ready);
     const buf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     return Buffer.from(buf);

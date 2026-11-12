@@ -393,10 +393,17 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .crop-view::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px) 0 33.3%/100% 33.3%, linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px) 33.3% 0/33.3% 100%; background-repeat: no-repeat; opacity: .0; transition: opacity .15s; } .crop-view.drag::after { opacity: 1; }
 .photo-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
-/* empty optional text never leaves a gap in the editor: it collapses until you are working in that entry */
-.sheet-edit [data-iid]:not(.is-active) .rz-e-text:empty,
-.sheet-edit [data-iid]:not(.is-active) .rz-li-s:empty,
-.sheet-edit [data-iid]:not(.is-active) .rz-bul.is-blank { display: none; }
+/* the editor lays out exactly like the exported PDF: anything empty collapses (as it is omitted from the PDF)
+   until you are working in that entry, header or section, so the preview never shows spacing the PDF lacks */
+.sheet-edit [data-iid]:not(.is-active) [data-f]:empty,
+.sheet-edit .rz-header:not(.is-active) [data-f]:empty,
+.sheet-edit [data-iid]:not(.is-active) .rz-bul.is-blank,
+.sheet-edit [data-iid]:not(.is-active) .rz-e-date.is-empty,
+.sheet-edit [data-iid]:not(.is-active) .rz-e-loc.is-empty,
+.sheet-edit .rz-contacts li:not(:focus-within):has(> [data-f]:empty),
+.sheet-edit .rz-text[data-iid]:empty:not(.is-active),
+.sheet-edit .rz-sec.is-void:not(.is-active) { display: none !important; }
+.sheet-edit [data-iid]:not(.is-active) .rz-bul li:empty { display: none; }
 
 /* resume cards stay tidy with very long names, at any card width */
 .card.resume { min-width: 0; } .card-meta { min-width: 0; gap: 2px; }
@@ -423,3 +430,8 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 /* while the divider is being dragged, thumbnails are not repainted at all */
 body.resizing .tpl-grid { content-visibility: hidden; contain-intrinsic-size: auto 2400px; }
 body.resizing .stage .sheet { will-change: transform; }
+
+/* the bullet being edited is outlined on its own, and so is its row in the sidebar */
+.sheet-edit .rz-bul li.is-bullet { outline: 2px solid #34d399; outline-offset: 2px; border-radius: 3px; background: rgba(52,211,153,.08); }
+.follow-b { outline: 2px solid var(--brand); outline-offset: 1px; border-radius: 8px; background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.fbtn.bul { color: #059669; } .fbtn.bul.danger { color: #dc2626; } .fbtn.bul[title^="Move this bullet up"] { margin-left: 4px; position: relative; } .fbtn.bul[title^="Move this bullet up"]::before { content: ''; position: absolute; left: -5px; top: 6px; bottom: 6px; width: 1px; background: rgba(120,120,140,.35); }

@@ -453,7 +453,8 @@ export async function mountEditor(root, id) {
   }
   function hideFloats() {
     itemBar.style.display = 'none'; itemBar.style.visibility = ''; selBar.style.display = 'none'; linkMode = false;
-    content.querySelectorAll('.is-active').forEach((e) => e.classList.remove('is-active'));
+    content.querySelectorAll('.is-active, .is-bullet').forEach((e) => e.classList.remove('is-active', 'is-bullet'));
+    panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
     activeEl = null;
   }
   function positionBars() {
@@ -482,6 +483,7 @@ export async function mountEditor(root, id) {
       const kind = kindOf(sec);
       if (k === 'E' && p[3] === 'date') { const cal = ibtn('calendar', 'Pick dates', () => datePicker(it.date, (v) => { it.date = v; commit(f.dataset.f); }, cal)); btns.push(cal); }
       if (KIND_LABEL[kind]) btns.push(h('button', { type: 'button', class: 'fbtn add', onmousedown: (e) => e.preventDefault(), onclick: () => { const n = T.newItem(sec.type); sec.items.splice(sec.items.indexOf(it) + 1, 0, n); commit(firstField(sec, n)); } }, h('span', { html: SVG(ICO.plus) }), KIND_LABEL[kind]));
+      if (k === 'BL') btns.push(ibtn('up', 'Move this bullet up', () => moveBullet(-1), 'bul'), ibtn('down', 'Move this bullet down', () => moveBullet(1), 'bul'), ibtn('trash', 'Delete this bullet', removeBullet, 'bul danger'));
       if (kind === 'entries') btns.push(ibtn('plus', 'Add bullet point', () => { it.bullets.push(''); commit(`BL:${sec.id}:${it.id}`); }, 'txt'));
       if (kind === 'skills') btns.push(ibtn('plus', 'Add skill', () => { it.tags.push(''); commit(`T:${sec.id}:${it.id}:${it.tags.length - 1}`); }, 'txt'));
       if (KIND_LABEL[kind]) btns.push(ibtn('up', 'Move up', () => moveItem(sec, it, -1)), ibtn('down', 'Move down', () => moveItem(sec, it, 1)), ibtn('copy', 'Duplicate', () => { const c = Object.assign(T.clone(it), { id: T.uid() }); sec.items.splice(sec.items.indexOf(it) + 1, 0, c); commit(firstField(sec, c)); }));
@@ -503,7 +505,33 @@ export async function mountEditor(root, id) {
     if (!/^(https?:|mailto:|tel:)/i.test(u)) u = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u) ? 'mailto:' + u : 'https://' + u;
     return R.safeUrl(u);
   }
+  /* the bullet holding the caret: highlighted on the page and in the sidebar, and targeted by the bullet buttons on the tool bar */
+  function bulletOf() {
+    const sel = getSelection(); if (!sel || !sel.anchorNode) return null;
+    const n = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+    const li = n && n.closest('ul[data-f^="BL:"] > li'); if (!li || !content.contains(li)) return null;
+    const ul = li.parentElement, p = ul.dataset.f.split(':'), sec = doc.sections.find((x) => x.id === p[1]), it = sec && sec.items.find((x) => x.id === p[2]);
+    return it ? { ul, li, i: Array.from(ul.children).indexOf(li), sec, it, fid: ul.dataset.f } : null;
+  }
+  function markBullet() {
+    content.querySelectorAll('.is-bullet').forEach((e) => e.classList.remove('is-bullet'));
+    panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
+    const b = bulletOf(); if (!b) return;
+    b.li.classList.add('is-bullet');
+    const row = panelBody.querySelector(`[data-fid="${cssId(b.fid)}"]`);
+    const r = row && row.children[b.i]; if (r) r.classList.add('follow-b');
+  }
+  function moveBullet(d) {
+    const b = bulletOf(); if (!b) return; const j = b.i + d;
+    if (j < 0 || j >= b.it.bullets.length) return;
+    b.it.bullets.splice(j, 0, b.it.bullets.splice(b.i, 1)[0]); commit(); focusBullet(b.sec, b.it, j);
+  }
+  function removeBullet() {
+    const b = bulletOf(); if (!b) return;
+    b.it.bullets.splice(b.i, 1); if (!b.it.bullets.length) b.it.bullets.push(''); commit(); focusBullet(b.sec, b.it, Math.min(b.i, b.it.bullets.length - 1));
+  }
   function onSelection() {
+    markBullet();
     if (linkMode) return;
     const sel = getSelection();
     const hideSel = () => { selBar.style.display = 'none'; itemBar.style.visibility = ''; };
@@ -758,12 +786,17 @@ export async function mountEditor(root, id) {
   }
 
   function logoField(it) {
+    const crop = async (src) => {
+      const out = await cropPhoto(src, { size: 200, shape: 'square', png: true, title: 'Crop the logo' });
+      if (out && out.length < 120000) { it.logo = out; touch(); drawPanel(); } else if (out) toast('Image too large', 'err');
+    };
     const f = h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onchange: async (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      try { it.logo = await logoDataUrl(file); touch(); drawPanel(); } catch (ex) { toast(ex.message, 'err'); }
+      const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+      await crop(file);
     } });
     return h('div', { class: 'logo-row' }, it.logo ? h('img', { src: it.logo }) : h('span', { class: 'muted' }, 'No logo'),
       h('button', { class: 'btn small', onclick: () => f.click() }, it.logo ? 'Change logo' : 'Add logo / icon'),
+      it.logo ? h('button', { class: 'btn small', onclick: () => crop(it.logo) }, 'Crop') : null,
       it.logo ? h('button', { class: 'btn small danger-t', onclick: () => { it.logo = ''; touch(); drawPanel(); } }, 'Remove') : null, f);
   }
 
