@@ -453,8 +453,8 @@ export async function mountEditor(root, id) {
   }
   function hideFloats() {
     itemBar.style.display = 'none'; itemBar.style.visibility = ''; selBar.style.display = 'none'; linkMode = false;
-    content.querySelectorAll('.is-active, .is-bullet').forEach((e) => e.classList.remove('is-active', 'is-bullet'));
-    if (!panelBody.contains(document.activeElement)) panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b'));
+    if (panelBody.contains(document.activeElement)) { content.querySelectorAll('.is-bullet').forEach((e) => e.classList.remove('is-bullet')); } // working in the sidebar: it owns the highlights
+    else { content.querySelectorAll('.is-active, .is-bullet').forEach((e) => e.classList.remove('is-active', 'is-bullet')); panelBody.querySelectorAll('.follow-b').forEach((e) => e.classList.remove('follow-b')); }
     activeEl = null;
   }
   function positionBars() {
@@ -1510,10 +1510,13 @@ export async function mountEditor(root, id) {
   /* ...and focusing a sidebar control highlights the matching spot on the page */
   function pageHighlight(fid, idx) {
     content.querySelectorAll('.pv-hl, .pv-bullet').forEach((x) => x.classList.remove('pv-hl', 'pv-bullet'));
+    content.querySelectorAll('.is-active').forEach((x) => x.classList.remove('is-active')); // the green box follows too
     panelBody.querySelectorAll('.follow-b').forEach((x) => x.classList.remove('follow-b'));
     if (!fid) return;
     let f = content.querySelector(`[data-f="${cssId(fid)}"]`);
     if (!f) return;
+    const owner = f.closest('[data-iid]') || f.closest('.rz-header') || f.closest('.rz-h');
+    if (owner) owner.classList.add('is-active');
     if (idx >= 0 && fid.startsWith('BL:') && f.children[idx]) { // a single bullet: same amber look as clicking it on the page
       f.classList.add('pv-hl'); f = f.children[idx]; f.classList.add('pv-bullet');
       const box = panelBody.querySelector(`[data-fid="${cssId(fid)}"]`), row = box && box.children[idx]; if (row) row.classList.add('follow-b');
