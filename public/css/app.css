@@ -65,7 +65,7 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand-ring)
 .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
 .tpl { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--surface); border: 2px solid var(--line); border-radius: 10px; padding: 8px; cursor: pointer; text-align: center; }
 .tpl:hover { border-color: var(--brand-ring); } .tpl.on { border-color: var(--brand); background: var(--brand-soft); } .tpl small { color: var(--muted); font-size: 11.5px; line-height: 1.25; }
-.tpl-grid.in-panel { grid-template-columns: repeat(2, 1fr); padding: 4px; }
+.tpl-grid.in-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; }
 
 /* editor shell */
 .editor { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -333,7 +333,7 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; } .chip.on .dot { box-shadow: 0 0 0 1.5px #fff; }
 .tb-meta { display: flex; justify-content: space-between; align-items: center; } .tb-meta a { margin-left: 6px; }
 .tpl-tags { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; margin-top: 2px; } .tpl-tags i { font-style: normal; font-size: 10px; font-weight: 600; background: var(--soft); color: var(--muted); border-radius: 99px; padding: 1px 7px; }
-.panel .tpl-grid { grid-template-columns: repeat(2, 1fr); } .panel .tb-lbl { width: 62px; }
+.panel .tpl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .panel .tb-lbl { width: 62px; }
 
 /* reset buttons */
 .f-head { display: flex; align-items: center; gap: 6px; }
@@ -435,3 +435,8 @@ body.resizing .stage .sheet { will-change: transform; }
 .sheet-edit .rz-bul li.is-bullet { outline: 2px solid #34d399; outline-offset: 2px; border-radius: 3px; background: rgba(52,211,153,.08); }
 .follow-b { outline: 2px solid var(--brand); outline-offset: 1px; border-radius: 8px; background: color-mix(in srgb, var(--brand) 8%, transparent); }
 .fbtn.bul { color: #059669; } .fbtn.bul.danger { color: #dc2626; } .fbtn.bul[title^="Move this bullet up"] { margin-left: 4px; position: relative; } .fbtn.bul[title^="Move this bullet up"]::before { content: ''; position: absolute; left: -5px; top: 6px; bottom: 6px; width: 1px; background: rgba(120,120,140,.35); }
+/* template cards never push the grid wider than the panel */
+.tpl-grid .tpl { min-width: 0; overflow: hidden; }
+.tpl-grid .tpl > * { max-width: 100%; min-width: 0; }
+.tpl-grid .tpl small { overflow-wrap: anywhere; }
+.tpl-grid .tpl .tpl-tags, .tpl-grid .tpl .tags { flex-wrap: wrap; justify-content: center; }
