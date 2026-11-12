@@ -364,7 +364,7 @@ body.resizing { cursor: col-resize; user-select: none; } body.resizing iframe, b
 .row.level { align-items: flex-start; } .row.level .grip { padding-top: 9px; }
 .row.level .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } .row.level .lvl { margin: 4px 0 2px 2px; gap: 8px; }
 .row.bullet { align-items: flex-start; } .row.bullet textarea { padding: 7px 9px; line-height: 1.4; min-height: 36px; }
-.add-btn { align-self: flex-start; border: 1px dashed var(--zone-line); background: transparent; color: var(--brand); font-weight: 600; gap: 4px; margin-top: 2px; }
+.add-btn { align-self: flex-start; border: 1px dashed var(--zone-line); background: transparent; color: var(--brand); font-weight: 600; gap: 4px; margin-top: 12px; }
 .add-btn:hover { background: var(--brand-soft); border-color: var(--brand); }
 
 .tpl-apply { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; } .tpl-apply p { margin: 0; } .tpl-mode button { flex: 1; }
